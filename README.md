@@ -1,70 +1,91 @@
-# Getting Started with Create React App
+# KarVichar Radio — Listener App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> Listen. Reflect. Evolve.
 
-## Available Scripts
+A mobile-first React web app for listening to the KarVichar live radio stream with real-time updates.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- **Live Audio Streaming** — HTML5 audio player with play/pause
+- **Now Playing** — Shows current song title or speaker name in real time
+- **Real-Time Updates** — Socket.io WebSocket integration for instant state sync
+- **Status Banner** — Connection and stream status indicators
+- **Dark Theme** — Clean, minimal dark UI
+- **PWA** — Installable on mobile (Add to Home Screen)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- React 18 (CRA + CRACO)
+- Tailwind CSS 3
+- Axios
+- Socket.io-client
 
-### `npm test`
+## Getting Started
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
 
-### `npm run build`
+- Node.js 18+
+- Backend server running ([karVicharTohPamm-Backend](../karVicharTohPamm-Backend))
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Install
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+cd karVichartohPamm
+npm install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Configure
 
-### `npm run eject`
+Create a `.env` file (or edit the existing one):
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_STREAM_URL=http://<caster-host>:<port>/R5a6I
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The app prefers the `streamUrl` from the backend API/WebSocket response. The env variable is a fallback.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Run
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm start
+```
 
-## Learn More
+Opens at [http://localhost:3000](http://localhost:3000).
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Build
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build
+```
 
-### Code Splitting
+Outputs to `build/` folder, ready for static hosting.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Project Structure
 
-### Analyzing the Bundle Size
+```
+src/
+  components/
+    AudioPlayer.js    — Stream playback with play/pause + loading state
+    NowPlaying.js     — Current mode, speaker, or song display
+    StatusBanner.js   — WebSocket + stream status indicators
+  App.js              — Main app: API fetch + WebSocket + layout
+  index.js            — Entry point with PWA registration
+  index.css           — Tailwind directives + base styles
+  serviceWorkerRegistration.js — PWA service worker registration
+public/
+  service-worker.js   — Offline caching service worker
+  manifest.json       — PWA manifest
+  index.html          — HTML shell
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## API Integration
 
-### Making a Progressive Web App
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/radio/status` | GET | Fetch current radio state + stream URL |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## WebSocket
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Connects to backend via Socket.io and listens for:
+- `status-update` — Real-time radio state changes
