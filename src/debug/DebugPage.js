@@ -214,7 +214,7 @@ export default function DebugPage() {
   return (
     <div className="min-h-screen bg-primary text-white p-4 max-w-3xl mx-auto">
       <header className="mb-6">
-        <h1 className="text-xl font-bold">KarVichar Debug</h1>
+        <h1 className="text-xl font-bold">KVTP Debug</h1>
         <p className="text-xs text-gray-500 mt-1">Internal diagnostics — not for end users</p>
       </header>
 

@@ -98,7 +98,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-4 border-b border-white/10">
         <div>
-          <h1 className="text-lg font-bold">KarVichar Admin</h1>
+          <h1 className="text-lg font-bold">KVTP Admin</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span
               className={`w-2 h-2 rounded-full ${

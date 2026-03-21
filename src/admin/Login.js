@@ -33,7 +33,7 @@ export default function Login() {
     <div className="min-h-screen bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white/5 backdrop-blur rounded-2xl p-8">
         <h1 className="text-2xl font-bold text-white text-center mb-1">
-          KarVichar Radio
+          KVTP Admin
         </h1>
         <p className="text-sm text-gray-400 text-center mb-8">Admin Login</p>
 

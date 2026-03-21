@@ -2,13 +2,17 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 
 const RETRY_DELAY = 3000;
 
-export default function AudioPlayer({ streamUrl }) {
+export default function AudioPlayer({ src, isStream, startTime, duration, onEnded }) {
   const audioRef = useRef(null);
   const retryTimer = useRef(null);
-  const prevStreamUrl = useRef(streamUrl);
+  const prevSrc = useRef(src);
+  const onEndedRef = useRef(onEnded);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Keep onEnded ref current
+  useEffect(() => { onEndedRef.current = onEnded; }, [onEnded]);
 
   // Clear any pending retry on unmount
   useEffect(() => {
@@ -17,22 +21,38 @@ export default function AudioPlayer({ streamUrl }) {
     };
   }, []);
 
-  // Handle stream URL change while playing
+  // Compute sync offset for music mode
+  const getSyncOffset = useCallback(() => {
+    if (isStream || !startTime) return 0;
+    const offset = Math.floor(Date.now() / 1000) - startTime;
+    if (duration && offset >= duration) return -1; // track already ended
+    return offset > 0 ? offset : 0;
+  }, [isStream, startTime, duration]);
+
+  // Handle src change while playing
   useEffect(() => {
-    if (prevStreamUrl.current !== streamUrl && playing) {
+    if (prevSrc.current !== src && playing) {
       const audio = audioRef.current;
       if (audio) {
-        audio.src = streamUrl;
+        audio.src = src;
         audio.load();
         setLoading(true);
-        audio.play().catch(() => {
+        const offset = getSyncOffset();
+        if (offset === -1) {
           setLoading(false);
           setPlaying(false);
-        });
+          if (onEndedRef.current) onEndedRef.current();
+        } else {
+          if (offset > 0) audio.currentTime = offset;
+          audio.play().catch(() => {
+            setLoading(false);
+            setPlaying(false);
+          });
+        }
       }
     }
-    prevStreamUrl.current = streamUrl;
-  }, [streamUrl, playing]);
+    prevSrc.current = src;
+  }, [src, playing, getSyncOffset]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -47,23 +67,36 @@ export default function AudioPlayer({ streamUrl }) {
 
     if (playing) {
       audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
+      if (isStream) {
+        audio.removeAttribute('src');
+        audio.load();
+      }
       setPlaying(false);
       setLoading(false);
     } else {
       // Stop any existing playback first to prevent overlap
       audio.pause();
       audio.currentTime = 0;
-      audio.src = streamUrl;
+      audio.src = src;
       audio.load();
       setLoading(true);
+
+      // Apply sync offset for music mode
+      const offset = getSyncOffset();
+      if (offset === -1) {
+        // Track already ended server-side, advance
+        setLoading(false);
+        if (onEndedRef.current) onEndedRef.current();
+        return;
+      }
+      if (offset > 0) audio.currentTime = offset;
+
       audio.play().catch(() => {
         setLoading(false);
         setPlaying(false);
       });
     }
-  }, [playing, streamUrl]);
+  }, [playing, src, isStream, getSyncOffset]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -79,31 +112,42 @@ export default function AudioPlayer({ streamUrl }) {
     const onError = () => {
       setPlaying(false);
       setLoading(false);
-      setError('Stream error. Retrying…');
-      // Auto-retry after delay
-      retryTimer.current = setTimeout(() => {
-        if (audio.src) {
-          audio.load();
-          setLoading(true);
-          audio.play().catch(() => {
-            setLoading(false);
-          });
-        }
-      }, RETRY_DELAY);
+      if (isStream) {
+        setError('Stream error. Retrying…');
+        retryTimer.current = setTimeout(() => {
+          if (audio.src) {
+            audio.load();
+            setLoading(true);
+            audio.play().catch(() => {
+              setLoading(false);
+            });
+          }
+        }, RETRY_DELAY);
+      } else {
+        setError('Playback error');
+      }
+    };
+    const onEndedEvent = () => {
+      if (!isStream) {
+        setPlaying(false);
+        if (onEndedRef.current) onEndedRef.current();
+      }
     };
 
     audio.addEventListener('playing', onPlaying);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('waiting', onWaiting);
     audio.addEventListener('error', onError);
+    audio.addEventListener('ended', onEndedEvent);
 
     return () => {
       audio.removeEventListener('playing', onPlaying);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('waiting', onWaiting);
       audio.removeEventListener('error', onError);
+      audio.removeEventListener('ended', onEndedEvent);
     };
-  }, []);
+  }, [isStream]);
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -111,9 +155,9 @@ export default function AudioPlayer({ streamUrl }) {
 
       <button
         onClick={togglePlay}
-        disabled={!streamUrl}
+        disabled={!src}
         className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-4xl transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-accent/50 ${
-          !streamUrl
+          !src
             ? 'bg-gray-600 cursor-not-allowed'
             : playing
             ? 'bg-red-600 hover:bg-red-700 active:scale-95'
@@ -141,12 +185,12 @@ export default function AudioPlayer({ streamUrl }) {
       <p className="text-sm text-gray-400">
         {error
           ? <span className="text-red-400">{error}</span>
-          : !streamUrl
-          ? 'No stream available'
+          : !src
+          ? (isStream ? 'No stream available' : 'No track available')
           : loading
-          ? 'Connecting to stream…'
+          ? (isStream ? 'Connecting to stream…' : 'Loading track…')
           : playing
-          ? 'Now streaming'
+          ? (isStream ? 'Now streaming' : 'Now playing')
           : 'Tap to Listen'}
       </p>
     </div>

@@ -36,11 +36,12 @@ export const getRadioQueue = () => api.get('/api/radio/queue');
 // Admin actions
 export const setMode = (mode) => api.post('/api/admin/mode', { mode });
 export const setSpeaker = (name) => api.post('/api/admin/speaker', { name });
-export const setSong = (title, url) => api.post('/api/admin/song', { title, url });
+export const setSong = (title, url, duration) =>
+  api.post('/api/admin/song', { title, url, duration });
 
 // Queue management
-export const addSongToQueue = (title, url) =>
-  api.post('/api/admin/song/queue', { title, url });
+export const addSongToQueue = (title, url, duration) =>
+  api.post('/api/admin/song/queue', { title, url, duration });
 export const removeSongFromQueue = (id) =>
   api.delete(`/api/admin/song/${encodeURIComponent(id)}`);
 export const addSpeakerToQueue = (name) =>
@@ -50,6 +51,9 @@ export const addSpeakerToQueue = (name) =>
 export const selectSong = (id) => api.post('/api/admin/song/select', { id });
 export const selectSpeaker = (id) =>
   api.post('/api/admin/speaker/select', { id });
+
+// Playlist
+export const getPlaylist = () => api.get('/api/radio/playlist');
 
 // Upload
 export const uploadSong = (file) => {

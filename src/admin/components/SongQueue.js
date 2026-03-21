@@ -9,6 +9,7 @@ import {
 export default function SongQueue({ songs, onError, onRefresh }) {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
+  const [duration, setDuration] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleAdd = async (e) => {
@@ -16,9 +17,11 @@ export default function SongQueue({ songs, onError, onRefresh }) {
     if (!title.trim() || !url.trim()) return;
     setLoading(true);
     try {
-      await addSongToQueue(title.trim(), url.trim());
+      const dur = parseInt(duration, 10);
+      await addSongToQueue(title.trim(), url.trim(), dur > 0 ? dur : undefined);
       setTitle('');
       setUrl('');
+      setDuration('');
       onRefresh();
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to add song');
@@ -49,9 +52,11 @@ export default function SongQueue({ songs, onError, onRefresh }) {
     if (!title.trim() || !url.trim()) return;
     setLoading(true);
     try {
-      await setSong(title.trim(), url.trim());
+      const dur = parseInt(duration, 10);
+      await setSong(title.trim(), url.trim(), dur > 0 ? dur : undefined);
       setTitle('');
       setUrl('');
+      setDuration('');
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to set song');
     } finally {
@@ -79,6 +84,14 @@ export default function SongQueue({ songs, onError, onRefresh }) {
           placeholder="Song URL"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm placeholder-gray-500 border border-white/10 focus:border-accent focus:outline-none"
+        />
+        <input
+          type="number"
+          placeholder="Duration in seconds (optional)"
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          min="0"
           className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm placeholder-gray-500 border border-white/10 focus:border-accent focus:outline-none"
         />
         <div className="flex gap-2">
