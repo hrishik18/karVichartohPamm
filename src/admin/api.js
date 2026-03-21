@@ -31,29 +31,27 @@ export const login = (email, password) =>
 
 // Radio status (public)
 export const getRadioStatus = () => api.get('/api/radio/status');
-export const getRadioQueue = () => api.get('/api/radio/queue');
+export const getPlaylist = () => api.get('/api/radio/playlist');
 
-// Admin actions
-export const setMode = (mode) => api.post('/api/admin/mode', { mode });
-export const setSpeaker = (name) => api.post('/api/admin/speaker', { name });
+// Admin: Live speaker toggle
+export const goLive = (name) => api.post('/api/admin/live', { name });
+export const stopLive = () => api.post('/api/admin/live/stop');
+
+// Admin: Song controls
 export const setSong = (title, url, duration) =>
   api.post('/api/admin/song', { title, url, duration });
 
-// Queue management
-export const addSongToQueue = (title, url, duration) =>
-  api.post('/api/admin/song/queue', { title, url, duration });
-export const removeSongFromQueue = (id) =>
+// Playlist management
+export const addSongToPlaylist = (title, url, duration) =>
+  api.post('/api/admin/song/playlist', { title, url, duration });
+export const removeSongFromPlaylist = (id) =>
   api.delete(`/api/admin/song/${encodeURIComponent(id)}`);
-export const addSpeakerToQueue = (name) =>
-  api.post('/api/admin/speaker/queue', { name });
-
-// Select from queue
-export const selectSong = (id) => api.post('/api/admin/song/select', { id });
-export const selectSpeaker = (id) =>
-  api.post('/api/admin/speaker/select', { id });
-
-// Playlist
-export const getPlaylist = () => api.get('/api/radio/playlist');
+export const playSongFromPlaylist = (id) =>
+  api.post('/api/admin/song/play', { id });
+export const editSongInPlaylist = (id, updates) =>
+  api.patch(`/api/admin/song/${encodeURIComponent(id)}`, updates);
+export const reorderSong = (id, direction) =>
+  api.post('/api/admin/song/reorder', { id, direction });
 
 // Upload
 export const uploadSong = (file) => {

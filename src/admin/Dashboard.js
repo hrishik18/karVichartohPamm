@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { getRadioStatus, getRadioQueue } from './api';
+import { getRadioStatus, getPlaylist } from './api';
 import { removeToken } from './auth';
-import ModeControl from './components/ModeControl';
+import LiveControl from './components/LiveControl';
 import NowPlayingAdmin from './components/NowPlayingAdmin';
 import SongQueue from './components/SongQueue';
-import SpeakerQueue from './components/SpeakerQueue';
 import UploadSection from './components/UploadSection';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -18,19 +17,19 @@ export default function Dashboard() {
     currentSpeaker: null,
     currentTrack: null,
   });
-  const [queue, setQueue] = useState({ songs: [], speakers: [] });
+  const [songs, setSongs] = useState([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
   const hasConnectedBefore = useRef(false);
 
   const fetchAll = useCallback(async () => {
     try {
-      const [statusRes, queueRes] = await Promise.all([
+      const [statusRes, playlistRes] = await Promise.all([
         getRadioStatus(),
-        getRadioQueue(),
+        getPlaylist(),
       ]);
       setStatus(statusRes.data);
-      setQueue(queueRes.data);
+      setSongs(playlistRes.data);
     } catch (err) {
       console.error('Failed to fetch state:', err);
     }
@@ -66,11 +65,15 @@ export default function Dashboard() {
         currentTrack: data.currentTrack ?? null,
       }));
     });
+    socket.on('playlist-update', (playlist) => {
+      setSongs(playlist);
+    });
 
     return () => {
       socket.off('connect');
       socket.off('disconnect');
       socket.off('status-update');
+      socket.off('playlist-update');
       socket.close();
     };
   }, [fetchAll]);
@@ -87,9 +90,9 @@ export default function Dashboard() {
     navigate('/admin/login', { replace: true });
   };
 
-  const refreshQueue = () => {
-    getRadioQueue()
-      .then((res) => setQueue(res.data))
+  const refreshPlaylist = () => {
+    getPlaylist()
+      .then((res) => setSongs(res.data))
       .catch(() => {});
   };
 
@@ -125,29 +128,35 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Dashboard grid */}
-      <main className="p-4 flex flex-col gap-4 max-w-2xl mx-auto">
-        <ModeControl currentMode={status.mode} onError={setError} />
+      {/* Dashboard — 2-column layout (controls left, playlist right) */}
+      <main className="p-4 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Left column — Controls */}
+          <div className="flex flex-col gap-4 lg:w-1/3 lg:min-w-[320px]">
+            <LiveControl
+              currentMode={status.mode}
+              currentSpeaker={status.currentSpeaker}
+              onError={setError}
+            />
 
-        <NowPlayingAdmin
-          mode={status.mode}
-          currentSpeaker={status.currentSpeaker}
-          currentTrack={status.currentTrack}
-        />
+            <NowPlayingAdmin
+              mode={status.mode}
+              currentSpeaker={status.currentSpeaker}
+              currentTrack={status.currentTrack}
+            />
 
-        <UploadSection onError={setError} />
+            <UploadSection onError={setError} />
+          </div>
 
-        <SongQueue
-          songs={queue.songs}
-          onError={setError}
-          onRefresh={refreshQueue}
-        />
-
-        <SpeakerQueue
-          speakers={queue.speakers}
-          onError={setError}
-          onRefresh={refreshQueue}
-        />
+          {/* Right column — Playlist */}
+          <div className="flex flex-col gap-4 lg:flex-1">
+            <SongQueue
+              songs={songs}
+              onError={setError}
+              onRefresh={refreshPlaylist}
+            />
+          </div>
+        </div>
       </main>
     </div>
   );

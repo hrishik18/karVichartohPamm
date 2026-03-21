@@ -21,7 +21,7 @@ export default function DebugPage() {
   const [statusError, setStatusError] = useState(null);
   const [statusFetchedAt, setStatusFetchedAt] = useState(null);
 
-  // --- Queue ---
+  // --- Playlist ---
   const [queue, setQueue] = useState(null);
   const [queueError, setQueueError] = useState(null);
   const [queueFetchedAt, setQueueFetchedAt] = useState(null);
@@ -82,20 +82,20 @@ export default function DebugPage() {
       });
   }, [addLog]);
 
-  // --- Fetch queue ---
+  // --- Fetch playlist ---
   const fetchQueue = useCallback(() => {
-    addLog('Fetching /api/radio/queue…');
+    addLog('Fetching /api/radio/playlist…');
     axios
-      .get(`${API_URL}/api/radio/queue`)
+      .get(`${API_URL}/api/radio/playlist`)
       .then((res) => {
         setQueue(res.data);
         setQueueError(null);
         setQueueFetchedAt(ts());
-        addLog('Queue fetch success');
+        addLog('Playlist fetch success');
       })
       .catch((err) => {
         setQueueError(err.message);
-        addLog(`Queue fetch FAILED: ${err.message}`);
+        addLog(`Playlist fetch FAILED: ${err.message}`);
       });
   }, [addLog]);
 
@@ -269,11 +269,11 @@ export default function DebugPage() {
           <JsonBlock data={status} />
         </section>
 
-        {/* 3. Queue State */}
+        {/* 3. Playlist State */}
         <section className="bg-white/5 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-              Queue State
+              Playlist
             </h2>
             <button
               onClick={fetchQueue}
@@ -288,15 +288,9 @@ export default function DebugPage() {
           {queueFetchedAt && (
             <p className="text-xs text-gray-500 mb-2">Last fetched: {queueFetchedAt}</p>
           )}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Songs ({queue?.songs?.length ?? 0})</p>
-              <JsonBlock data={queue?.songs} />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Speakers ({queue?.speakers?.length ?? 0})</p>
-              <JsonBlock data={queue?.speakers} />
-            </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Songs ({Array.isArray(queue) ? queue.length : 0})</p>
+            <JsonBlock data={queue} />
           </div>
         </section>
 

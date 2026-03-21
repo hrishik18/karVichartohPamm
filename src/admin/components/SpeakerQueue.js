@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addSpeakerToQueue, selectSpeaker, setSpeaker } from '../api';
+import { addSpeakerToQueue, selectSpeaker, setSpeaker, removeSpeakerFromQueue } from '../api';
 
 export default function SpeakerQueue({ speakers, onError, onRefresh }) {
   const [name, setName] = useState('');
@@ -25,6 +25,15 @@ export default function SpeakerQueue({ speakers, onError, onRefresh }) {
       await selectSpeaker(id);
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to select speaker');
+    }
+  };
+
+  const handleRemove = async (id) => {
+    try {
+      await removeSpeakerFromQueue(id);
+      onRefresh();
+    } catch (err) {
+      onError(err.response?.data?.message || 'Failed to remove speaker');
     }
   };
 
@@ -89,12 +98,20 @@ export default function SpeakerQueue({ speakers, onError, onRefresh }) {
               <span className="text-white text-sm truncate flex-1 mr-2">
                 {speaker.name}
               </span>
-              <button
-                onClick={() => handleSelect(speaker.id)}
-                className="px-2 py-1 rounded bg-purple-500/20 text-purple-400 text-xs hover:bg-purple-500/30 transition-colors shrink-0"
-              >
-                Set Live
-              </button>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  onClick={() => handleSelect(speaker.id)}
+                  className="px-2 py-1 rounded bg-purple-500/20 text-purple-400 text-xs hover:bg-purple-500/30 transition-colors"
+                >
+                  Set Live
+                </button>
+                <button
+                  onClick={() => handleRemove(speaker.id)}
+                  className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ul>
