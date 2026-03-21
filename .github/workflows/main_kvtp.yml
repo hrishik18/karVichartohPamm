@@ -1,4 +1,7 @@
-name: Build and deploy React app to Azure Web App - kvtp
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy React app to Azure Web App - KarVicharTohPamm
 
 on:
   push:
@@ -10,9 +13,10 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: karVichartohPamm
 
     steps:
       - uses: actions/checkout@v4
@@ -20,10 +24,9 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x'
+          node-version: '20.x'
 
       - name: npm install and build
-        working-directory: karVichartohPamm
         run: |
           npm install
           npm run build
@@ -37,9 +40,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
 
     steps:
       - name: Download artifact from build job
@@ -50,13 +55,16 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FCB55B8DDE3541B4AC08D656B525AF9C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_CAE6FFC3F70A47CFA51E311A037B4841 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C17DED25AB63491795160696751326E6 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_4ADA5523B0154F239EBB6EC3D8A77D59 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D05FD300B19E4FF38EB0B9ED92A115AA }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_0A33A908E96C4BD18559DEF99673FE5D }}
 
-      - name: Deploy to Azure Web App
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
-          app-name: 'kvtp'
+          app-name: 'KarVicharTohPamm'
           slot-name: 'Production'
           package: .
+          startup-command: 'pm2 serve /home/site/wwwroot --no-daemon --spa'
+          
