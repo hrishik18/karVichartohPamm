@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 
 const RETRY_DELAY = 3000;
 
-export default function AudioPlayer({ src, isStream, startTime, duration, onEnded }) {
+export default function AudioPlayer({ src, isStream, startTime, duration, onEnded, onError: onErrorCb }) {
   const audioRef = useRef(null);
   const retryTimer = useRef(null);
   const prevSrc = useRef(src);
@@ -11,8 +11,11 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Keep onEnded ref current
+  const onErrorCbRef = useRef(onErrorCb);
+
+  // Keep callback refs current
   useEffect(() => { onEndedRef.current = onEnded; }, [onEnded]);
+  useEffect(() => { onErrorCbRef.current = onErrorCb; }, [onErrorCb]);
 
   // Clear any pending retry on unmount
   useEffect(() => {
@@ -124,7 +127,9 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           }
         }, RETRY_DELAY);
       } else {
-        setError('Playback error');
+        setError('Track unavailable — skipping…');
+        // Notify parent so it can tell the backend to advance
+        if (onErrorCbRef.current) onErrorCbRef.current();
       }
     };
     const onEndedEvent = () => {

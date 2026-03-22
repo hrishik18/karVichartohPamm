@@ -112,6 +112,14 @@ export default function Home() {
     }
   }, [activeTrack]);
 
+  // Handle playback error (e.g. deleted blob) → skip to next
+  const handlePlaybackError = useCallback(() => {
+    if (!activeTrack?.id) return;
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('song-ended', { id: activeTrack.id });
+    }
+  }, [activeTrack]);
+
   // Determine audio source and mode
   const isStream = radioState.mode === 'speaker';
   const audioSrc = isStream ? radioState.streamUrl : activeTrack?.url || null;
@@ -135,6 +143,7 @@ export default function Home() {
           startTime={activeStartTime}
           duration={activeTrack?.duration}
           onEnded={handleTrackEnded}
+          onError={handlePlaybackError}
         />
         <NowPlaying
           mode={radioState.mode}
