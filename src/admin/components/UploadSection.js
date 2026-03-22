@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
-import { uploadSong, addSongToPlaylist } from '../api';
+import { uploadSongs, addSongToPlaylist } from '../api';
+
+const MAX_FILES = 10;
 
 function getAudioDuration(file) {
   return new Promise((resolve) => {
@@ -23,35 +25,46 @@ function titleFromFilename(name) {
 }
 
 export default function UploadSection({ onError, onUploaded }) {
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(''); // status text
   const inputRef = useRef(null);
 
+  const handleFileChange = (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length > MAX_FILES) {
+      onError(`Maximum ${MAX_FILES} files at once`);
+      e.target.value = '';
+      return;
+    }
+    setFiles(selected);
+  };
+
   const handleUpload = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     setUploading(true);
-    setProgress('Uploading…');
+    setProgress(`Uploading ${files.length} file${files.length > 1 ? 's' : ''}…`);
     try {
-      // 1. Upload to Azure Blob
-      const res = await uploadSong(file);
-      const blobUrl = res.data.url;
+      // 1. Upload all files to Azure Blob
+      const res = await uploadSongs(files);
+      const results = res.data.results;
 
-      // 2. Extract duration from audio file
-      setProgress('Reading duration…');
-      const duration = await getAudioDuration(file);
+      // 2. For each uploaded file, get duration and add to playlist
+      for (let i = 0; i < results.length; i++) {
+        const { originalName, url: blobUrl } = results[i];
+        const title = titleFromFilename(originalName);
+        setProgress(`Adding ${i + 1}/${results.length}: "${title}"…`);
 
-      // 3. Derive title from filename
-      const title = titleFromFilename(file.name);
+        const matchingFile = files.find((f) => f.name === originalName);
+        const duration = matchingFile ? await getAudioDuration(matchingFile) : null;
 
-      // 4. Auto-add to playlist
-      setProgress('Adding to playlist…');
-      await addSongToPlaylist(title, blobUrl, duration);
+        await addSongToPlaylist(title, blobUrl, duration);
+      }
 
-      setProgress(`Added "${title}"`);
-      setFile(null);
+      setProgress(`Added ${results.length} song${results.length > 1 ? 's' : ''}`);
+      setFiles([]);
       if (inputRef.current) inputRef.current.value = '';
-      if (onUploaded) onUploaded(blobUrl);
+      if (onUploaded) onUploaded();
 
       // Clear success message after 3s
       setTimeout(() => setProgress(''), 3000);
@@ -66,7 +79,7 @@ export default function UploadSection({ onError, onUploaded }) {
   return (
     <div className="bg-white/5 rounded-2xl p-5">
       <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        Upload Song
+        Upload Songs
       </h2>
 
       <div className="flex flex-col gap-3">
@@ -74,22 +87,30 @@ export default function UploadSection({ onError, onUploaded }) {
           ref={inputRef}
           type="file"
           accept="audio/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          multiple
+          onChange={handleFileChange}
           className="text-sm text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-white/10 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-white/20"
         />
 
-        {file && (
-          <p className="text-gray-400 text-xs truncate">
-            {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
-          </p>
+        {files.length > 0 && (
+          <div className="text-gray-400 text-xs space-y-0.5">
+            {files.map((f, i) => (
+              <p key={i} className="truncate">
+                {f.name} ({(f.size / 1024 / 1024).toFixed(1)} MB)
+              </p>
+            ))}
+            <p className="text-gray-500 pt-1">
+              {files.length} file{files.length > 1 ? 's' : ''} selected (max {MAX_FILES})
+            </p>
+          </div>
         )}
 
         <button
           onClick={handleUpload}
-          disabled={!file || uploading}
+          disabled={files.length === 0 || uploading}
           className="py-2 rounded-lg bg-accent hover:bg-green-600 text-white text-sm font-semibold transition-colors disabled:opacity-50"
         >
-          {uploading ? progress || 'Uploading…' : 'Upload & Add to Playlist'}
+          {uploading ? progress || 'Uploading…' : `Upload${files.length > 0 ? ` ${files.length}` : ''} & Add to Playlist`}
         </button>
 
         {!uploading && progress && (

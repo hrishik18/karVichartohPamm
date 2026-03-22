@@ -53,10 +53,12 @@ export const editSongInPlaylist = (id, updates) =>
 export const reorderSong = (id, direction) =>
   api.post('/api/admin/song/reorder', { id, direction });
 
-// Upload
-export const uploadSong = (file) => {
+// Upload (supports multiple files, max 10)
+export const uploadSongs = (files) => {
   const formData = new FormData();
-  formData.append('file', file);
+  for (const file of files) {
+    formData.append('files', file);
+  }
   return api.post('/api/admin/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
