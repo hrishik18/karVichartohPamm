@@ -1,19 +1,38 @@
 import { useState } from 'react';
 import { goLive, stopLive } from '../api';
 
-export default function LiveControl({ currentMode, currentSpeaker, onError }) {
-  const [name, setName] = useState('');
+function VoiceWaves() {
+  return (
+    <div className="flex items-end gap-[3px] h-8">
+      {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <span
+          key={i}
+          className="w-[3px] rounded-full bg-red-400"
+          style={{
+            animation: `wave 1.2s ease-in-out ${i * 0.1}s infinite alternate`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes wave {
+          0%   { height: 6px; opacity: 0.4; }
+          50%  { height: 24px; opacity: 1; }
+          100% { height: 8px; opacity: 0.5; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function LiveControl({ currentMode, onError }) {
   const [loading, setLoading] = useState(false);
 
   const isLive = currentMode === 'speaker';
 
-  const handleGoLive = async (e) => {
-    e.preventDefault();
-    if (!name.trim()) return;
+  const handleGoLive = async () => {
     setLoading(true);
     try {
-      await goLive(name.trim());
-      setName('');
+      await goLive();
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to go live');
     } finally {
@@ -32,48 +51,44 @@ export default function LiveControl({ currentMode, currentSpeaker, onError }) {
     }
   };
 
+  if (isLive) {
+    return (
+      <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5">
+        {/* Live header */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-red-400 font-bold text-sm uppercase tracking-wider">
+            Speaker is Live
+          </span>
+        </div>
+
+        {/* Voice wave visualization */}
+        <div className="flex items-center justify-center py-4">
+          <VoiceWaves />
+        </div>
+
+        {/* Stop button */}
+        <button
+          onClick={handleStopLive}
+          disabled={loading}
+          className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Stopping…' : 'Stop Live'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white/5 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        Live Speaker
-      </h2>
-
-      {isLive ? (
-        /* Currently live — show stop button */
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-red-400 font-semibold text-sm">
-              LIVE — {currentSpeaker}
-            </span>
-          </div>
-          <button
-            onClick={handleStopLive}
-            disabled={loading}
-            className="w-full py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Stopping…' : 'Stop Live'}
-          </button>
-        </div>
-      ) : (
-        /* Not live — show go live form */
-        <form onSubmit={handleGoLive} className="flex flex-col gap-2">
-          <input
-            type="text"
-            placeholder="Speaker name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-white/10 text-white text-sm placeholder-gray-500 border border-white/10 focus:border-accent focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={loading || !name.trim()}
-            className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Going Live…' : '🎙 Go Live'}
-          </button>
-        </form>
-      )}
+      <button
+        onClick={handleGoLive}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors disabled:opacity-50"
+      >
+        <span className="text-lg">🎙</span>
+        {loading ? 'Going Live…' : 'Go Live as Speaker'}
+      </button>
     </div>
   );
 }

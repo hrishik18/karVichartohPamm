@@ -1,4 +1,4 @@
-export default function StatusBanner({ socketConnected, streamUrl }) {
+export default function StatusBanner({ socketConnected, speakerLive }) {
   return (
     <div className="w-full flex items-center justify-center gap-4 px-4 py-2 text-xs">
       {/* Socket status */}
@@ -13,15 +13,15 @@ export default function StatusBanner({ socketConnected, streamUrl }) {
         </span>
       </div>
 
-      {/* Stream status */}
+      {/* Speaker status */}
       <div className="flex items-center gap-1.5">
         <span
           className={`w-2 h-2 rounded-full ${
-            streamUrl ? 'bg-accent' : 'bg-yellow-500'
+            speakerLive ? 'bg-purple-500 animate-pulse' : 'bg-gray-600'
           }`}
         />
-        <span className={streamUrl ? 'text-gray-400' : 'text-yellow-400'}>
-          {streamUrl ? 'Stream Live' : 'Stream Offline'}
+        <span className={speakerLive ? 'text-purple-400' : 'text-gray-500'}>
+          {speakerLive ? 'Speaker Live' : 'Music Mode'}
         </span>
       </div>
     </div>

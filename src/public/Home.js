@@ -22,6 +22,7 @@ export default function Home() {
   const [socketConnected, setSocketConnected] = useState(false);
   const hasConnectedBefore = useRef(false);
   const backendTrackId = useRef(null);
+  const socketRef = useRef(null);
 
   const applyUpdate = useCallback((data) => {
     setRadioState((prev) => ({
@@ -71,6 +72,7 @@ export default function Home() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
     });
+    socketRef.current = socket;
 
     socket.on('connect', () => {
       setSocketConnected(true);
@@ -90,17 +92,25 @@ export default function Home() {
       socket.off('status-update');
       socket.off('playlist-update');
       socket.close();
+      socketRef.current = null;
     };
   }, [applyUpdate, fetchStatus, fetchPlaylist]);
 
-  // Handle track ended → advance to next in playlist
+  // Auto-select first playlist track when there's no active track
+  useEffect(() => {
+    if (!activeTrack && playlist.length > 0 && radioState.mode === 'music') {
+      setActiveTrack(playlist[0]);
+      setActiveStartTime(null);
+    }
+  }, [playlist, activeTrack, radioState.mode]);
+
+  // Handle track ended → notify backend to advance queue
   const handleTrackEnded = useCallback(() => {
-    if (playlist.length === 0) return;
-    const currentIndex = playlist.findIndex((s) => s.id === activeTrack?.id);
-    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % playlist.length : 0;
-    setActiveTrack(playlist[nextIndex]);
-    setActiveStartTime(Math.floor(Date.now() / 1000));
-  }, [playlist, activeTrack]);
+    if (!activeTrack?.id) return;
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('song-ended', { id: activeTrack.id });
+    }
+  }, [activeTrack]);
 
   // Determine audio source and mode
   const isStream = radioState.mode === 'speaker';
@@ -115,7 +125,7 @@ export default function Home() {
 
       <StatusBanner
         socketConnected={socketConnected}
-        streamUrl={radioState.streamUrl}
+        speakerLive={radioState.mode === 'speaker'}
       />
 
       <main className="flex-1 flex flex-col items-center justify-center gap-8 px-4 pb-12">
@@ -128,7 +138,6 @@ export default function Home() {
         />
         <NowPlaying
           mode={radioState.mode}
-          currentSpeaker={isStream ? radioState.currentSpeaker : null}
           currentTrack={isStream ? null : activeTrack}
         />
       </main>

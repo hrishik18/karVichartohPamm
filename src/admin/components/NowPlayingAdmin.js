@@ -1,4 +1,4 @@
-export default function NowPlayingAdmin({ mode, currentSpeaker, currentTrack }) {
+export default function NowPlayingAdmin({ mode, currentTrack }) {
   const isMusic = mode === 'music';
 
   return (
@@ -14,12 +14,12 @@ export default function NowPlayingAdmin({ mode, currentSpeaker, currentTrack }) 
               : 'bg-purple-500/20 text-purple-400'
           }`}
         >
-          {isMusic ? 'Music' : 'Speaker'}
+          {isMusic ? 'Music' : 'Speaker Live'}
         </span>
         <span className="text-white font-medium truncate">
           {isMusic
             ? currentTrack?.title || '—'
-            : currentSpeaker || '—'}
+            : 'Speaker is Live'}
         </span>
       </div>
     </div>

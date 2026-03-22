@@ -34,7 +34,7 @@ export const getRadioStatus = () => api.get('/api/radio/status');
 export const getPlaylist = () => api.get('/api/radio/playlist');
 
 // Admin: Live speaker toggle
-export const goLive = (name) => api.post('/api/admin/live', { name });
+export const goLive = () => api.post('/api/admin/live');
 export const stopLive = () => api.post('/api/admin/live/stop');
 
 // Admin: Song controls

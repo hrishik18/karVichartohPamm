@@ -135,17 +135,15 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 lg:w-1/3 lg:min-w-[320px]">
             <LiveControl
               currentMode={status.mode}
-              currentSpeaker={status.currentSpeaker}
               onError={setError}
             />
 
             <NowPlayingAdmin
               mode={status.mode}
-              currentSpeaker={status.currentSpeaker}
               currentTrack={status.currentTrack}
             />
 
-            <UploadSection onError={setError} />
+            <UploadSection onError={setError} onUploaded={refreshPlaylist} />
           </div>
 
           {/* Right column — Playlist */}
