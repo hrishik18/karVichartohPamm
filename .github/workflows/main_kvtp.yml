@@ -22,6 +22,9 @@ jobs:
           node-version: '24.x'
 
       - name: npm install and build
+        env:
+          REACT_APP_API_URL: 'https://kvtp-backend.azurewebsites.net'
+          REACT_APP_STREAM_URL: 'https://sapircast.caster.fm:443/R5a6l'
         run: |
           npm install
           npm run build
