@@ -1,91 +1,72 @@
-# KarVichar Radio — Listener App
+# KarVichar TohPamm — Frontend
 
 > Listen. Reflect. Evolve.
 
-A mobile-first React web app for listening to the KarVichar live radio stream with real-time updates.
+Mobile-first React web app for the KarVichar TohPamm online radio platform — a public **listener page** and a protected **admin dashboard**.
 
 ## Features
 
-- **Live Audio Streaming** — HTML5 audio player with play/pause
-- **Now Playing** — Shows current song title or speaker name in real time
-- **Real-Time Updates** — Socket.io WebSocket integration for instant state sync
-- **Status Banner** — Connection and stream status indicators
-- **Dark Theme** — Clean, minimal dark UI
-- **PWA** — Installable on mobile (Add to Home Screen)
+- **Listener** — Live audio streaming, now playing display, continuous playback synced via WebSocket, contact buttons (WhatsApp + Email)
+- **Admin** — Multi-file upload (max 10), playlist management (reorder/edit/play/remove), live speaker toggle
+- **Debug** — Tabbed diagnostics page with API latency, WebSocket status, and auto-refresh
 
 ## Tech Stack
 
-- React 18 (CRA + CRACO)
-- Tailwind CSS 3
-- Axios
-- Socket.io-client
+React 18, CRACO, Tailwind CSS 3, React Router v7, Axios, Socket.io-client
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- Backend server running ([karVicharTohPamm-Backend](../karVicharTohPamm-Backend))
+- Backend running ([karVicharTohPamm-Backend](../karVicharTohPamm-Backend))
 
-### Install
+### Install & Run
 
 ```bash
-cd karVichartohPamm
 npm install
+npm start        # http://localhost:3000
 ```
 
-### Configure
+### Environment Variables
 
-Create a `.env` file (or edit the existing one):
+Create a `.env` file:
 
-```
+```env
 REACT_APP_API_URL=http://localhost:5000
-REACT_APP_STREAM_URL=http://<caster-host>:<port>/R5a6I
+REACT_APP_STREAM_URL=http://<caster-host>:<port>/<mount>
 ```
 
-The app prefers the `streamUrl` from the backend API/WebSocket response. The env variable is a fallback.
-
-### Run
-
-```bash
-npm start
-```
-
-Opens at [http://localhost:3000](http://localhost:3000).
+> `REACT_APP_*` vars are baked in at **build time** (CRA limitation). The app prefers `streamUrl` from the backend API; env is a fallback.
 
 ### Build
 
 ```bash
-npm run build
+npm run build    # outputs to build/
 ```
-
-Outputs to `build/` folder, ready for static hosting.
 
 ## Project Structure
 
 ```
 src/
-  components/
-    AudioPlayer.js    — Stream playback with play/pause + loading state
-    NowPlaying.js     — Current mode, speaker, or song display
-    StatusBanner.js   — WebSocket + stream status indicators
-  App.js              — Main app: API fetch + WebSocket + layout
-  index.js            — Entry point with PWA registration
-  index.css           — Tailwind directives + base styles
-  serviceWorkerRegistration.js — PWA service worker registration
-public/
-  service-worker.js   — Offline caching service worker
-  manifest.json       — PWA manifest
-  index.html          — HTML shell
+├── public/          # Listener page (Home, AudioPlayer, NowPlaying, StatusBanner)
+├── admin/           # Admin panel (Dashboard, Login, ProtectedRoute, api, auth)
+│   └── components/  # UploadSection, LiveControl, SongQueue, NowPlayingAdmin
+├── debug/           # DebugPage
+├── components/      # Shared components
+├── App.js           # Router
+└── index.js         # Entry point
 ```
 
-## API Integration
+## Routes
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/radio/status` | GET | Fetch current radio state + stream URL |
+| Path | Component | Auth |
+|------|-----------|------|
+| `/` | Home (Listener) | No |
+| `/admin/login` | Login | No |
+| `/admin` | Dashboard | Yes (JWT) |
+| `/debug` | DebugPage | No |
 
-## WebSocket
+## Deployment
 
-Connects to backend via Socket.io and listens for:
-- `status-update` — Real-time radio state changes
+Deployed to Azure App Service via GitHub Actions. `REACT_APP_API_URL` and `REACT_APP_STREAM_URL` are set as build-time env vars in the workflow. Served with PM2 in SPA mode.
