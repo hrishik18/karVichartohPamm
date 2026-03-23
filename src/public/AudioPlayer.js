@@ -10,6 +10,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Tracks whether user has engaged playback — stays true across song transitions
+  const userWantsPlayback = useRef(false);
 
   const onErrorCbRef = useRef(onErrorCb);
 
@@ -32,14 +34,15 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
     return offset > 0 ? offset : 0;
   }, [isStream, startTime, duration]);
 
-  // Handle src change while playing
+  // Handle src change — auto-play next track if user had been listening
   useEffect(() => {
-    if (prevSrc.current !== src && playing) {
+    if (prevSrc.current !== src && userWantsPlayback.current) {
       const audio = audioRef.current;
-      if (audio) {
+      if (audio && src) {
         audio.src = src;
         audio.load();
         setLoading(true);
+        setError(null);
         const offset = getSyncOffset();
         if (offset === -1) {
           setLoading(false);
@@ -55,7 +58,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       }
     }
     prevSrc.current = src;
-  }, [src, playing, getSyncOffset]);
+  }, [src, getSyncOffset]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -76,7 +79,9 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       }
       setPlaying(false);
       setLoading(false);
+      userWantsPlayback.current = false;
     } else {
+      userWantsPlayback.current = true;
       // Stop any existing playback first to prevent overlap
       audio.pause();
       audio.currentTime = 0;
