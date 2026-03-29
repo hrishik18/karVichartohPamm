@@ -2,6 +2,52 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 
 const RETRY_DELAY = 3000;
 
+function formatTime(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function SongProgressBar({ startTime, duration, playing }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!startTime || !duration || !playing) {
+      setElapsed(0);
+      return;
+    }
+
+    const update = () => {
+      const now = Math.floor(Date.now() / 1000);
+      setElapsed(Math.min(now - startTime, duration));
+    };
+
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [startTime, duration, playing]);
+
+  if (!duration || !startTime) return null;
+
+  const pct = Math.min((elapsed / duration) * 100, 100);
+
+  return (
+    <div className="w-full max-w-xs flex flex-col gap-1">
+      {/* Bar */}
+      <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {/* Time labels */}
+      <div className="flex justify-between text-[11px] text-gray-500">
+        <span>{formatTime(elapsed)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function AudioPlayer({ src, isStream, startTime, duration, onEnded, onError: onErrorCb }) {
   const audioRef = useRef(null);
   const retryTimer = useRef(null);
@@ -91,12 +137,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
 
       // Apply sync offset for music mode
       const offset = getSyncOffset();
-      if (offset === -1) {
-        // Track already ended server-side, advance
-        setLoading(false);
-        if (onEndedRef.current) onEndedRef.current();
-        return;
-      }
+      // If track expired server-side (offset === -1), play from beginning
+      // anyway — user explicitly clicked play, so honor it.
       if (offset > 0) audio.currentTime = offset;
 
       audio.play().catch(() => {
@@ -191,6 +233,15 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           </svg>
         )}
       </button>
+
+      {/* Song progress bar — hidden in stream/speaker mode */}
+      {!isStream && (
+        <SongProgressBar
+          startTime={startTime}
+          duration={duration}
+          playing={playing}
+        />
+      )}
 
       <p className="text-sm text-gray-400">
         {error

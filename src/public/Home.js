@@ -110,7 +110,9 @@ export default function Home() {
     if (socketRef.current?.connected) {
       socketRef.current.emit('song-ended', { id: activeTrack.id });
     }
-  }, [activeTrack]);
+    // Safety net: re-fetch status in case the socket event is ignored
+    setTimeout(fetchStatus, 1500);
+  }, [activeTrack, fetchStatus]);
 
   // Handle playback error (e.g. deleted blob) → skip to next
   const handlePlaybackError = useCallback(() => {
