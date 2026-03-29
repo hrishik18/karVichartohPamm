@@ -2,7 +2,7 @@ export default function NowPlaying({ mode, currentTrack }) {
   const isMusic = mode === 'music';
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white/5 backdrop-blur rounded-2xl p-6">
+    <div className="w-full max-w-md mx-auto bg-card backdrop-blur rounded-2xl p-6">
       {/* Mode badge */}
       <div className="flex items-center justify-center gap-2 mb-4">
         <span
@@ -20,20 +20,20 @@ export default function NowPlaying({ mode, currentTrack }) {
       {isMusic ? (
         currentTrack ? (
           <div className="text-center">
-            <p className="text-lg font-bold text-white truncate">
+            <p className="text-lg font-bold text-heading truncate">
               {currentTrack.title}
             </p>
-            <p className="text-sm text-gray-400 mt-1">Now Playing</p>
+            <p className="text-sm text-txt-secondary mt-1">Now Playing</p>
           </div>
         ) : (
-          <p className="text-center text-gray-500 text-sm">
+          <p className="text-center text-muted text-sm">
             Nothing playing right now
           </p>
         )
       ) : (
         <div className="text-center">
-          <p className="text-lg font-bold text-white">Speaker is Live</p>
-          <p className="text-sm text-gray-400 mt-1">Music paused</p>
+          <p className="text-lg font-bold text-heading">Speaker is Live</p>
+          <p className="text-sm text-txt-secondary mt-1">Music paused</p>
         </div>
       )}
     </div>

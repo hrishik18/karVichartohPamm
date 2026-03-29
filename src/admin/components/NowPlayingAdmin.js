@@ -2,8 +2,8 @@ export default function NowPlayingAdmin({ mode, currentTrack }) {
   const isMusic = mode === 'music';
 
   return (
-    <div className="bg-white/5 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+    <div className="bg-card rounded-2xl p-5">
+      <h2 className="text-sm font-semibold text-txt-secondary uppercase tracking-wider mb-3">
         Now Playing
       </h2>
       <div className="flex items-center gap-3">
@@ -16,7 +16,7 @@ export default function NowPlayingAdmin({ mode, currentTrack }) {
         >
           {isMusic ? 'Music' : 'Speaker Live'}
         </span>
-        <span className="text-white font-medium truncate">
+        <span className="text-heading font-medium truncate">
           {isMusic
             ? currentTrack?.title || '—'
             : 'Speaker is Live'}

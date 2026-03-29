@@ -5,6 +5,7 @@ import AudioPlayer from './AudioPlayer';
 import NowPlaying from './NowPlaying';
 import StatusBanner from './StatusBanner';
 import InstallBanner from './InstallBanner';
+import { ThemeToggle } from '../components/ThemeProvider';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const FALLBACK_STREAM_URL = process.env.REACT_APP_STREAM_URL || '';
@@ -128,10 +129,13 @@ export default function Home() {
   const audioSrc = isStream ? radioState.streamUrl : activeTrack?.url || null;
 
   return (
-    <div className="min-h-screen bg-primary text-white flex flex-col">
-      <header className="pt-8 pb-2 text-center">
+    <div className="min-h-screen bg-page text-heading flex flex-col">
+      <header className="pt-8 pb-2 text-center relative">
+        <div className="absolute right-4 top-8">
+          <ThemeToggle />
+        </div>
         <h1 className="text-2xl font-bold tracking-tight">KVTP</h1>
-        <p className="text-sm text-gray-400 mt-1">Kar Vichar Toh Pamm</p>
+        <p className="text-sm text-txt-secondary mt-1">Kar Vichar Toh Pamm</p>
       </header>
 
       <StatusBanner
@@ -168,7 +172,7 @@ export default function Home() {
         <span className="text-sm font-semibold">Contact Us</span>
       </a>
 
-      <footer className="pb-6 text-center text-xs text-gray-600">
+      <footer className="pb-6 text-center text-xs text-faint">
         KVTP &copy; {new Date().getFullYear()}
       </footer>
 

@@ -48,7 +48,7 @@ export default function InstallBanner() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-sm animate-slide-up">
-      <div className="bg-secondary/95 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl shadow-black/30 flex items-center gap-3">
+      <div className="bg-banner backdrop-blur-md border border-subtle rounded-2xl p-4 shadow-xl shadow-black/30 flex items-center gap-3">
         {/* App icon */}
         <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
           <span className="text-2xl">🎵</span>
@@ -56,8 +56,8 @@ export default function InstallBanner() {
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-white text-sm font-semibold">Install KVTP</p>
-          <p className="text-gray-400 text-xs">
+          <p className="text-heading text-sm font-semibold">Install KVTP</p>
+          <p className="text-txt-secondary text-xs">
             Add to home screen for the best experience
           </p>
         </div>
@@ -66,7 +66,7 @@ export default function InstallBanner() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleDismiss}
-            className="text-gray-500 hover:text-gray-300 text-xs px-2 py-1 transition-colors"
+            className="text-muted hover:text-body text-xs px-2 py-1 transition-colors"
             aria-label="Dismiss install prompt"
           >
             Later

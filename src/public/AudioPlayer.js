@@ -33,14 +33,14 @@ function SongProgressBar({ audioRef, duration, playing }) {
   return (
     <div className="w-full max-w-xs flex flex-col gap-1">
       {/* Bar */}
-      <div className="w-full h-1 rounded-full bg-white/10 overflow-hidden">
+      <div className="w-full h-1 rounded-full bg-elevated overflow-hidden">
         <div
           className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear"
           style={{ width: `${pct}%` }}
         />
       </div>
       {/* Time labels */}
-      <div className="flex justify-between text-[11px] text-gray-500">
+      <div className="flex justify-between text-[11px] text-muted">
         <span>{formatTime(elapsed)}</span>
         <span>{formatTime(duration)}</span>
       </div>
@@ -254,7 +254,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
         />
       )}
 
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-txt-secondary">
         {error
           ? <span className="text-red-400">{error}</span>
           : !src

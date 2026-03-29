@@ -11,6 +11,44 @@ import { useToast } from '../../components/Toast';
 
 const SNAP_TOP_PX = 20;
 
+function getFuzzyMatchScore(title, query) {
+  const normalizedTitle = title.toLowerCase();
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) return 0;
+
+  const exactIndex = normalizedTitle.indexOf(normalizedQuery);
+  if (exactIndex !== -1) {
+    return 1000 - exactIndex;
+  }
+
+  let queryIndex = 0;
+  let score = 0;
+  let streak = 0;
+  let firstMatchIndex = -1;
+
+  for (let titleIndex = 0; titleIndex < normalizedTitle.length; titleIndex += 1) {
+    if (normalizedTitle[titleIndex] !== normalizedQuery[queryIndex]) {
+      streak = 0;
+      continue;
+    }
+
+    if (firstMatchIndex === -1) {
+      firstMatchIndex = titleIndex;
+    }
+
+    streak += 1;
+    score += 5 + streak * 3;
+    queryIndex += 1;
+
+    if (queryIndex === normalizedQuery.length) {
+      return score - firstMatchIndex;
+    }
+  }
+
+  return Number.NEGATIVE_INFINITY;
+}
+
 function getDropIndex(songs, itemRefs, clientY) {
   if (songs.length === 0) return 0;
 
@@ -42,8 +80,31 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemRefs = useRef(new Map());
   const toast = useToast();
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredSongs = normalizedQuery
+    ? songs
+      .map((song, index) => ({
+        song,
+        index,
+        score: getFuzzyMatchScore(song.title, normalizedQuery),
+      }))
+      .filter((entry) => Number.isFinite(entry.score))
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+
+        return left.index - right.index;
+      })
+      .map((entry) => entry.song)
+    : songs;
+  const searchActive = normalizedQuery.length > 0;
+  const allVisibleSelected =
+    filteredSongs.length > 0 &&
+    filteredSongs.every((song) => bulkSelected.has(song.id));
 
   const toggleBulkMode = () => {
     setBulkMode((prev) => !prev);
@@ -62,11 +123,17 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
   };
 
   const toggleSelectAll = () => {
-    if (bulkSelected.size === songs.length) {
-      setBulkSelected(new Set());
-    } else {
-      setBulkSelected(new Set(songs.map((s) => s.id)));
-    }
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+
+      if (allVisibleSelected) {
+        filteredSongs.forEach((song) => next.delete(song.id));
+      } else {
+        filteredSongs.forEach((song) => next.add(song.id));
+      }
+
+      return next;
+    });
   };
 
   const handleBulkRemove = async () => {
@@ -203,8 +270,15 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
     if (editing && editing.id !== id) setEditing(null);
   };
 
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+    setSelectedId(null);
+    setEditing(null);
+    setDragState(null);
+  };
+
   const startDrag = useCallback((event, songId, sourceIndex) => {
-    if (movingId || (event.pointerType === 'mouse' && event.button !== 0)) {
+    if (searchActive || movingId || (event.pointerType === 'mouse' && event.button !== 0)) {
       return;
     }
 
@@ -221,7 +295,7 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
       startY: event.clientY,
       currentY: event.clientY,
     });
-  }, [movingId]);
+  }, [movingId, searchActive]);
 
   const updateDrag = useCallback((event) => {
     const songId = event.currentTarget?.dataset?.songId;
@@ -262,14 +336,45 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
   }, []);
 
   return (
-    <div className="bg-white/5 rounded-2xl p-5">
+    <div className="bg-card rounded-2xl p-5">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-txt-secondary uppercase tracking-wider">
           Playlist
         </h2>
-        <span className="text-[11px] text-gray-500">
-          {bulkMode ? 'Select songs, then act' : 'Drag the handle to move songs anywhere in the queue'}
+        <span className="text-[11px] text-muted">
+          {searchActive
+            ? `Showing ${filteredSongs.length} of ${songs.length} songs`
+            : bulkMode
+            ? 'Select songs, then act'
+            : 'Drag the handle to move songs anywhere in the queue'}
         </span>
+      </div>
+
+      <div className="mb-3">
+        <div className="flex items-center gap-2 rounded-xl border border-subtle bg-inset px-3 py-2">
+          <span className="text-muted text-sm">⌕</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search songs by title"
+            className="flex-1 bg-transparent text-sm text-heading placeholder:text-muted focus:outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange({ target: { value: '' } })}
+              className="text-xs text-txt-secondary hover:text-heading transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        {searchActive && (
+          <p className="mt-2 text-[11px] text-muted">
+            Reordering is disabled while a search filter is active.
+          </p>
+        )}
       </div>
 
       {/* Bulk actions toolbar */}
@@ -280,7 +385,7 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
           className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
             bulkMode
               ? 'bg-accent/20 text-accent hover:bg-accent/30'
-              : 'bg-white/10 text-gray-300 hover:bg-white/20'
+              : 'bg-elevated text-body hover:bg-elevated-hover'
           } disabled:opacity-40`}
         >
           {bulkMode ? '✕ Cancel' : '☐ Select'}
@@ -290,9 +395,9 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
           <>
             <button
               onClick={toggleSelectAll}
-              className="px-3 py-1.5 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors"
+              className="px-3 py-1.5 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors"
             >
-              {bulkSelected.size === songs.length ? 'Deselect All' : 'Select All'}
+              {allVisibleSelected ? 'Deselect Visible' : 'Select Visible'}
             </button>
             <button
               onClick={handleBulkRemove}
@@ -307,7 +412,7 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
         <button
           onClick={handleShuffle}
           disabled={bulkBusy || songs.length < 2}
-          className="px-3 py-1.5 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-40"
+          className="px-3 py-1.5 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors disabled:opacity-40"
         >
           🔀 Shuffle
         </button>
@@ -315,21 +420,24 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
 
       {/* Playlist list */}
       {songs.length === 0 ? (
-        <p className="text-gray-500 text-sm">Playlist empty</p>
+        <p className="text-muted text-sm">Playlist empty</p>
+      ) : filteredSongs.length === 0 ? (
+        <p className="text-muted text-sm">No songs match your search.</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {songs.map((song, index) => (
+          {filteredSongs.map((song, index) => (
             <SongItem
               key={song.id}
               song={song}
               index={index}
-              total={songs.length}
+              total={filteredSongs.length}
               isNowPlaying={song.id === currentTrackId}
               isSelected={selectedId === song.id}
               isEditing={editing && editing.id === song.id}
               editing={editing}
               isMoving={movingId === song.id}
               dragState={dragState}
+              searchActive={searchActive}
               bulkMode={bulkMode}
               bulkChecked={bulkSelected.has(song.id)}
               setItemRef={setItemRef}
@@ -363,6 +471,7 @@ function SongItem({
   editing,
   isMoving,
   dragState,
+  searchActive,
   bulkMode,
   bulkChecked,
   setItemRef,
@@ -386,6 +495,7 @@ function SongItem({
   const showDropBefore = dragState && dragState.dropIndex === index && dragState.dropIndex <= dragState.sourceIndex;
   const showDropAfter = dragState && dragState.dropIndex === index && dragState.dropIndex > dragState.sourceIndex;
   const disableActions = isMoving || Boolean(dragState);
+  const disableReorder = disableActions || searchActive;
 
   return (
     <li
@@ -407,12 +517,12 @@ function SongItem({
         onClick={onToggleSelect}
         className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-colors ${
           isDragging
-            ? 'bg-white/12 ring-1 ring-accent/50 shadow-lg shadow-black/20'
+            ? 'bg-elevated ring-1 ring-accent/50 shadow-lg shadow-black/20'
             : isNowPlaying
             ? 'bg-accent/10 border-l-2 border-accent'
             : isSelected
-            ? 'bg-white/10 ring-1 ring-accent/40'
-            : 'bg-white/5 hover:bg-white/[0.07]'
+            ? 'bg-elevated ring-1 ring-accent/40'
+            : 'bg-card hover:bg-card-hover'
         }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -433,13 +543,13 @@ function SongItem({
             onPointerMove={onUpdateDrag}
             onPointerUp={onFinishDrag}
             onPointerCancel={onCancelDrag}
-            disabled={disableActions || isEditing}
-            className="shrink-0 text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ touchAction: 'none', cursor: disableActions || isEditing ? 'not-allowed' : 'grab' }}
+            disabled={disableReorder || isEditing}
+            className="shrink-0 text-muted hover:text-body transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ touchAction: 'none', cursor: disableReorder || isEditing ? 'not-allowed' : 'grab' }}
           >
             ⋮⋮
           </button>
-          <span className="text-gray-500 text-xs w-5 text-right shrink-0">
+          <span className="text-muted text-xs w-5 text-right shrink-0">
             {index + 1}
           </span>
           {isNowPlaying && (
@@ -448,17 +558,17 @@ function SongItem({
               Live
             </span>
           )}
-          <span className={`text-sm truncate ${isNowPlaying ? 'text-accent font-semibold' : 'text-white'}`}>
+          <span className={`text-sm truncate ${isNowPlaying ? 'text-accent font-semibold' : 'text-heading'}`}>
             {song.title}
           </span>
           {song.duration && (
-            <span className="text-gray-500 text-xs shrink-0">
+            <span className="text-muted text-xs shrink-0">
               {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
             </span>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
-          <span className="text-gray-600 text-xs">
+          <span className="text-faint text-xs">
             {isSelected ? '▾' : '▸'}
           </span>
         </div>
@@ -470,18 +580,18 @@ function SongItem({
 
       {/* Expanded actions */}
       {isSelected && !isEditing && (
-        <div className="flex flex-wrap gap-1 px-3 py-2 bg-white/[0.03] rounded-b-lg -mt-1">
+        <div className="flex flex-wrap gap-1 px-3 py-2 bg-inset rounded-b-lg -mt-1">
           <button
             onClick={() => onReorder(song.id, 'up')}
-            disabled={!canMoveUp || disableActions}
-            className="px-2 py-1 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-30"
+            disabled={!canMoveUp || disableReorder}
+            className="px-2 py-1 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors disabled:opacity-30"
           >
             ▲ Up
           </button>
           <button
             onClick={() => onReorder(song.id, 'down')}
-            disabled={!canMoveDown || disableActions}
-            className="px-2 py-1 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-30"
+            disabled={!canMoveDown || disableReorder}
+            className="px-2 py-1 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors disabled:opacity-30"
           >
             ▼ Down
           </button>
@@ -511,7 +621,7 @@ function SongItem({
 
       {/* Edit form */}
       {isEditing && editing && (
-        <div className="flex flex-col gap-2 px-3 py-3 bg-white/[0.03] rounded-b-lg -mt-1">
+        <div className="flex flex-col gap-2 px-3 py-3 bg-inset rounded-b-lg -mt-1">
           <input
             type="text"
             value={editing.title}
@@ -519,7 +629,7 @@ function SongItem({
               onEditChange({ ...editing, title: e.target.value })
             }
             placeholder="Title"
-            className="px-2 py-1.5 rounded bg-white/10 text-white text-xs border border-white/10 focus:border-accent focus:outline-none"
+            className="px-2 py-1.5 rounded bg-elevated text-heading text-xs border border-subtle focus:border-accent focus:outline-none"
           />
           <input
             type="url"
@@ -528,7 +638,7 @@ function SongItem({
               onEditChange({ ...editing, url: e.target.value })
             }
             placeholder="URL"
-            className="px-2 py-1.5 rounded bg-white/10 text-white text-xs border border-white/10 focus:border-accent focus:outline-none"
+            className="px-2 py-1.5 rounded bg-elevated text-heading text-xs border border-subtle focus:border-accent focus:outline-none"
           />
           <input
             type="number"
@@ -538,7 +648,7 @@ function SongItem({
             }
             placeholder="Duration (seconds)"
             min="0"
-            className="px-2 py-1.5 rounded bg-white/10 text-white text-xs border border-white/10 focus:border-accent focus:outline-none"
+            className="px-2 py-1.5 rounded bg-elevated text-heading text-xs border border-subtle focus:border-accent focus:outline-none"
           />
           <div className="flex gap-2">
             <button
@@ -549,7 +659,7 @@ function SongItem({
             </button>
             <button
               onClick={onCancelEdit}
-              className="flex-1 py-1.5 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors"
+              className="flex-1 py-1.5 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors"
             >
               Cancel
             </button>

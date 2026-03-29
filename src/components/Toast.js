@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 
 const ToastContext = createContext(null);
 
@@ -21,11 +21,11 @@ export function ToastProvider({ children }) {
     return id;
   }, [removeToast]);
 
-  const toast = useCallback({
+  const toast = useMemo(() => ({
     error: (msg, dur) => addToast(msg, 'error', dur),
     success: (msg, dur) => addToast(msg, 'success', dur || 3000),
     info: (msg, dur) => addToast(msg, 'info', dur),
-  }, [addToast]);
+  }), [addToast]);
 
   // Make toast callable as toast.error() etc, but also as a setError drop-in
   const value = Object.assign(

@@ -30,12 +30,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-primary flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white/5 backdrop-blur rounded-2xl p-8">
-        <h1 className="text-2xl font-bold text-white text-center mb-1">
+    <div className="min-h-screen bg-page flex items-center justify-center px-4">
+      <div className="w-full max-w-sm bg-card backdrop-blur rounded-2xl p-8">
+        <h1 className="text-2xl font-bold text-heading text-center mb-1">
           KVTP Admin
         </h1>
-        <p className="text-sm text-gray-400 text-center mb-8">Admin Login</p>
+        <p className="text-sm text-txt-secondary text-center mb-8">Admin Login</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
@@ -45,7 +45,7 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="w-full px-4 py-3 rounded-lg bg-white/10 text-white placeholder-gray-500 border border-white/10 focus:border-accent focus:outline-none"
+            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder-muted border border-subtle focus:border-accent focus:outline-none"
           />
           <input
             type="password"
@@ -54,7 +54,7 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full px-4 py-3 rounded-lg bg-white/10 text-white placeholder-gray-500 border border-white/10 focus:border-accent focus:outline-none"
+            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder-muted border border-subtle focus:border-accent focus:outline-none"
           />
 
           {error && (

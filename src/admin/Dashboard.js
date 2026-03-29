@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { getRadioStatus, getPlaylist } from './api';
 import { removeToken } from './auth';
 import { useToast } from '../components/Toast';
+import { ThemeToggle } from '../components/ThemeProvider';
 import LiveControl from './components/LiveControl';
 import NowPlayingAdmin from './components/NowPlayingAdmin';
 import SongQueue from './components/SongQueue';
@@ -91,9 +92,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-primary text-white">
+    <div className="min-h-screen bg-page text-heading">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-4 border-b border-white/10">
+      <header className="flex items-center justify-between px-4 py-4 border-b border-subtle">
         <div>
           <h1 className="text-lg font-bold">KVTP Admin</h1>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -102,17 +103,20 @@ export default function Dashboard() {
                 connected ? 'bg-accent' : 'bg-red-500 animate-pulse'
               }`}
             />
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-txt-secondary">
               {connected ? 'Live' : 'Reconnecting…'}
             </span>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 rounded-lg bg-white/10 text-sm text-gray-300 hover:bg-white/20 transition-colors"
-        >
-          Logout
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 rounded-lg bg-elevated text-sm text-body hover:bg-elevated-hover transition-colors"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       {/* Dashboard — 2-column layout (controls left, playlist right) */}

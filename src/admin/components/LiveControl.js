@@ -80,7 +80,7 @@ export default function LiveControl({ currentMode, onError }) {
   }
 
   return (
-    <div className="bg-white/5 rounded-2xl p-5">
+    <div className="bg-card rounded-2xl p-5">
       <button
         onClick={handleGoLive}
         disabled={loading}
