@@ -33,7 +33,7 @@ function SongProgressBar({ audioRef, duration, playing }) {
   return (
     <div className="w-full max-w-xs flex flex-col gap-1">
       {/* Bar */}
-      <div className="w-full h-1 rounded-full bg-elevated overflow-hidden">
+      <div className="w-full h-1.5 rounded-full bg-elevated overflow-hidden">
         <div
           className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear"
           style={{ width: `${pct}%` }}
@@ -48,7 +48,7 @@ function SongProgressBar({ audioRef, duration, playing }) {
   );
 }
 
-export default function AudioPlayer({ src, isStream, startTime, duration, onEnded, onError: onErrorCb }) {
+export default function AudioPlayer({ src, isStream, startTime, duration, trackTitle, onEnded, onError: onErrorCb }) {
   const audioRef = useRef(null);
   const retryTimer = useRef(null);
   const prevSrc = useRef(src);
@@ -223,7 +223,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           !src
             ? 'bg-gray-600 cursor-not-allowed'
             : playing
-            ? 'bg-red-600 hover:bg-red-700 active:scale-95'
+            ? 'bg-gray-700 hover:bg-gray-600 active:scale-95'
             : 'bg-accent hover:bg-green-600 active:scale-95'
         }`}
         aria-label={playing ? 'Pause' : 'Play'}
@@ -263,6 +263,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           ? (isStream ? 'Connecting to stream…' : 'Loading track…')
           : playing
           ? (isStream ? 'Now streaming' : 'Now playing')
+          : trackTitle
+          ? trackTitle
           : 'Tap to Listen'}
       </p>
     </div>

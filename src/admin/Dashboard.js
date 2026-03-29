@@ -22,6 +22,7 @@ export default function Dashboard() {
   });
   const [songs, setSongs] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const hasConnectedBefore = useRef(false);
 
   const fetchAll = useCallback(async () => {
@@ -109,6 +110,13 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowHelp(true)}
+            className="p-2 rounded-lg bg-elevated hover:bg-elevated-hover transition-colors"
+            aria-label="Help"
+          >
+            <span className="text-lg">❓</span>
+          </button>
           <ThemeToggle />
           <button
             onClick={handleLogout}
@@ -148,6 +156,52 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {/* Help modal */}
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl border border-subtle"
+            style={{ backgroundColor: 'var(--color-page)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-heading">Admin Panel Guide</h2>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="p-1 rounded-lg hover:bg-elevated transition-colors text-muted hover:text-heading"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="space-y-3 text-sm text-body">
+              <li className="flex gap-3">
+                <span className="text-xl shrink-0">📤</span>
+                <div><strong className="text-heading">Upload Songs</strong> — Select up to 10 audio files at once. They're uploaded and added to the playlist automatically.</div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-xl shrink-0">🎵</span>
+                <div><strong className="text-heading">Song Queue</strong> — Drag to reorder, or expand a song to move up/down, edit title, play, or remove it.</div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-xl shrink-0">🎙️</span>
+                <div><strong className="text-heading">Go Live</strong> — Toggle speaker mode. Music pauses automatically and resumes when you stop.</div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-xl shrink-0">✅</span>
+                <div><strong className="text-heading">Bulk Actions</strong> — Use Select mode to pick multiple songs, then remove them at once. You can also shuffle the playlist.</div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-xl shrink-0">🔍</span>
+                <div><strong className="text-heading">Search</strong> — Filter songs by title in the queue using the search bar.</div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

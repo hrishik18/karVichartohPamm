@@ -91,6 +91,9 @@ export default function UploadSection({ onError, onUploaded }) {
           onChange={handleFileChange}
           className="text-sm text-body file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-elevated file:text-heading file:font-semibold file:cursor-pointer hover:file:bg-elevated-hover"
         />
+        <p className="text-xs text-muted">
+          Select up to {MAX_FILES} files at once · MP3, WAV, OGG
+        </p>
 
         {files.length > 0 && (
           <div className="text-txt-secondary text-xs space-y-0.5">
@@ -100,7 +103,7 @@ export default function UploadSection({ onError, onUploaded }) {
               </p>
             ))}
             <p className="text-muted pt-1">
-              {files.length} file{files.length > 1 ? 's' : ''} selected (max {MAX_FILES})
+              {files.length} of {MAX_FILES} slots used
             </p>
           </div>
         )}
