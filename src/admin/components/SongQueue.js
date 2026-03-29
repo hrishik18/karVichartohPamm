@@ -388,14 +388,14 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
               onClick={toggleSelectAll}
               className="px-3 py-1.5 rounded bg-elevated text-body text-xs hover:bg-elevated-hover transition-colors"
             >
-              {allVisibleSelected ? 'Deselect Visible' : 'Select Visible'}
+              {allVisibleSelected ? 'Deselect All' : 'Select All'}
             </button>
             <button
               onClick={handleBulkRemove}
               disabled={bulkSelected.size === 0 || bulkBusy}
               className="px-3 py-1.5 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors disabled:opacity-40"
             >
-              🗑 Remove ({bulkSelected.size})
+              ✕ Remove ({bulkSelected.size})
             </button>
           </>
         )}
@@ -605,7 +605,7 @@ function SongItem({
             disabled={disableActions}
             className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors"
           >
-            🗑 Remove
+            ✕ Remove
           </button>
         </div>
       )}
