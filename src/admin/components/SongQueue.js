@@ -31,7 +31,7 @@ function getDropIndex(songs, itemRefs, clientY) {
   return songs.length - 1;
 }
 
-export default function SongQueue({ songs, onError, onRefresh }) {
+export default function SongQueue({ songs, currentTrackId, onError, onRefresh }) {
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null); // { id, title, url, duration }
   const [dragState, setDragState] = useState(null);
@@ -223,6 +223,7 @@ export default function SongQueue({ songs, onError, onRefresh }) {
               song={song}
               index={index}
               total={songs.length}
+              isNowPlaying={song.id === currentTrackId}
               isSelected={selectedId === song.id}
               isEditing={editing && editing.id === song.id}
               editing={editing}
@@ -253,6 +254,7 @@ function SongItem({
   song,
   index,
   total,
+  isNowPlaying,
   isSelected,
   isEditing,
   editing,
@@ -301,6 +303,8 @@ function SongItem({
         className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-colors ${
           isDragging
             ? 'bg-white/12 ring-1 ring-accent/50 shadow-lg shadow-black/20'
+            : isNowPlaying
+            ? 'bg-accent/10 border-l-2 border-accent'
             : isSelected
             ? 'bg-white/10 ring-1 ring-accent/40'
             : 'bg-white/5 hover:bg-white/[0.07]'
@@ -324,7 +328,13 @@ function SongItem({
           <span className="text-gray-500 text-xs w-5 text-right shrink-0">
             {index + 1}
           </span>
-          <span className="text-white text-sm truncate">
+          {isNowPlaying && (
+            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/20 text-accent text-[10px] font-bold uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              Live
+            </span>
+          )}
+          <span className={`text-sm truncate ${isNowPlaying ? 'text-accent font-semibold' : 'text-white'}`}>
             {song.title}
           </span>
           {song.duration && (

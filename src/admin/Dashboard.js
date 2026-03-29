@@ -150,6 +150,7 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 lg:flex-1">
             <SongQueue
               songs={songs}
+              currentTrackId={status.currentTrack?.id}
               onError={setError}
               onRefresh={refreshPlaylist}
             />
