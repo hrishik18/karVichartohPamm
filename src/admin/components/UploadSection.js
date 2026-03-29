@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { uploadSongs, addSongToPlaylist } from '../api';
+import { useToast } from '../../components/Toast';
 
 const MAX_FILES = 10;
 
@@ -25,6 +26,7 @@ function titleFromFilename(name) {
 }
 
 export default function UploadSection({ onError, onUploaded }) {
+  const toast = useToast();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(''); // status text
@@ -61,13 +63,11 @@ export default function UploadSection({ onError, onUploaded }) {
         await addSongToPlaylist(title, blobUrl, duration);
       }
 
-      setProgress(`Added ${results.length} song${results.length > 1 ? 's' : ''}`);
+      setProgress('');
+      toast.success(`Added ${results.length} song${results.length > 1 ? 's' : ''} to playlist`);
       setFiles([]);
       if (inputRef.current) inputRef.current.value = '';
       if (onUploaded) onUploaded();
-
-      // Clear success message after 3s
-      setTimeout(() => setProgress(''), 3000);
     } catch (err) {
       setProgress('');
       onError(err.response?.data?.message || 'Upload failed');

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { getRadioStatus, getPlaylist } from './api';
 import { removeToken } from './auth';
+import { useToast } from '../components/Toast';
 import LiveControl from './components/LiveControl';
 import NowPlayingAdmin from './components/NowPlayingAdmin';
 import SongQueue from './components/SongQueue';
@@ -12,6 +13,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [status, setStatus] = useState({
     mode: 'music',
     currentSpeaker: null,
@@ -19,7 +21,6 @@ export default function Dashboard() {
   });
   const [songs, setSongs] = useState([]);
   const [connected, setConnected] = useState(false);
-  const [error, setError] = useState('');
   const hasConnectedBefore = useRef(false);
 
   const fetchAll = useCallback(async () => {
@@ -78,13 +79,6 @@ export default function Dashboard() {
     };
   }, [fetchAll]);
 
-  // Auto-clear error
-  useEffect(() => {
-    if (!error) return;
-    const t = setTimeout(() => setError(''), 4000);
-    return () => clearTimeout(t);
-  }, [error]);
-
   const handleLogout = () => {
     removeToken();
     navigate('/admin/login', { replace: true });
@@ -121,13 +115,6 @@ export default function Dashboard() {
         </button>
       </header>
 
-      {/* Error toast */}
-      {error && (
-        <div className="mx-4 mt-3 px-4 py-2 bg-red-500/20 text-red-400 text-sm rounded-lg">
-          {error}
-        </div>
-      )}
-
       {/* Dashboard — 2-column layout (controls left, playlist right) */}
       <main className="p-4 max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -135,7 +122,7 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 lg:w-1/3 lg:min-w-[320px]">
             <LiveControl
               currentMode={status.mode}
-              onError={setError}
+              onError={toast}
             />
 
             <NowPlayingAdmin
@@ -143,7 +130,7 @@ export default function Dashboard() {
               currentTrack={status.currentTrack}
             />
 
-            <UploadSection onError={setError} onUploaded={refreshPlaylist} />
+            <UploadSection onError={toast} onUploaded={refreshPlaylist} />
           </div>
 
           {/* Right column — Playlist */}
@@ -151,7 +138,7 @@ export default function Dashboard() {
             <SongQueue
               songs={songs}
               currentTrackId={status.currentTrack?.id}
-              onError={setError}
+              onError={toast}
               onRefresh={refreshPlaylist}
             />
           </div>
