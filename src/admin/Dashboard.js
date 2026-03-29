@@ -35,8 +35,9 @@ export default function Dashboard() {
       setSongs(playlistRes.data);
     } catch (err) {
       console.error('Failed to fetch state:', err);
+      toast.error('Failed to load dashboard data. Check your connection.');
     }
-  }, []);
+  }, [toast]);
 
   // Initial fetch
   useEffect(() => {

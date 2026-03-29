@@ -26,6 +26,7 @@ export default function Home() {
   const hasConnectedBefore = useRef(false);
   const backendTrackId = useRef(null);
   const socketRef = useRef(null);
+  const safetyTimerRef = useRef(null);
 
   const applyUpdate = useCallback((data) => {
     setRadioState((prev) => ({
@@ -100,6 +101,7 @@ export default function Home() {
       socket.off('playlist-update');
       socket.close();
       socketRef.current = null;
+      clearTimeout(safetyTimerRef.current);
     };
   }, [applyUpdate, fetchStatus, fetchPlaylist]);
 
@@ -118,7 +120,8 @@ export default function Home() {
       socketRef.current.emit('song-ended', { id: activeTrack.id });
     }
     // Safety net: re-fetch status in case the socket event is ignored
-    setTimeout(fetchStatus, 1500);
+    clearTimeout(safetyTimerRef.current);
+    safetyTimerRef.current = setTimeout(fetchStatus, 1500);
   }, [activeTrack, fetchStatus]);
 
   // Handle playback error (e.g. deleted blob) → skip to next

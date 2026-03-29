@@ -45,7 +45,7 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder-muted border border-subtle focus:border-accent focus:outline-none"
+            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder:text-muted border border-subtle focus:border-accent focus:outline-none"
           />
           <input
             type="password"
@@ -54,7 +54,7 @@ export default function Login() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder-muted border border-subtle focus:border-accent focus:outline-none"
+            className="w-full px-4 py-3 rounded-lg bg-elevated text-heading placeholder:text-muted border border-subtle focus:border-accent focus:outline-none"
           />
 
           {error && (

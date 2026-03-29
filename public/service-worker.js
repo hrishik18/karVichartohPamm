@@ -62,11 +62,13 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() =>
         caches.match(request).then((cached) => {
-          // If no cache hit for a navigation request, serve the cached index.html (app shell)
-          if (!cached && request.mode === 'navigate') {
+          if (cached) return cached;
+          // For navigation requests, serve the cached app shell
+          if (request.mode === 'navigate') {
             return caches.match('/index.html');
           }
-          return cached;
+          // For other requests with no cache hit, return a proper error response
+          return new Response('Offline', { status: 504, statusText: 'Gateway Timeout' });
         })
       )
   );
