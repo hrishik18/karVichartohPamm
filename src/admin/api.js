@@ -53,6 +53,14 @@ export const editSongInPlaylist = (id, updates) =>
 export const reorderSong = (id, direction) =>
   api.post('/api/admin/song/reorder', { id, direction });
 
+// Bulk playlist actions
+export const bulkRemoveSongs = (ids) =>
+  api.post('/api/admin/song/bulk-remove', { ids });
+export const shufflePlaylist = () =>
+  api.post('/api/admin/song/shuffle');
+export const clearPlaylist = () =>
+  api.delete('/api/admin/song/clear');
+
 // Upload (supports multiple files, max 10)
 export const uploadSongs = (files) => {
   const formData = new FormData();

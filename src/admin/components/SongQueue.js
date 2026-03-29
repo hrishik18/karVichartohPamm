@@ -4,7 +4,10 @@ import {
   playSongFromPlaylist,
   editSongInPlaylist,
   reorderSong,
+  bulkRemoveSongs,
+  shufflePlaylist,
 } from '../api';
+import { useToast } from '../../components/Toast';
 
 const SNAP_TOP_PX = 20;
 
@@ -36,7 +39,64 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
   const [editing, setEditing] = useState(null); // { id, title, url, duration }
   const [dragState, setDragState] = useState(null);
   const [movingId, setMovingId] = useState(null);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const itemRefs = useRef(new Map());
+  const toast = useToast();
+
+  const toggleBulkMode = () => {
+    setBulkMode((prev) => !prev);
+    setBulkSelected(new Set());
+    setSelectedId(null);
+    setEditing(null);
+  };
+
+  const toggleBulkItem = (id) => {
+    setBulkSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (bulkSelected.size === songs.length) {
+      setBulkSelected(new Set());
+    } else {
+      setBulkSelected(new Set(songs.map((s) => s.id)));
+    }
+  };
+
+  const handleBulkRemove = async () => {
+    if (bulkSelected.size === 0) return;
+    try {
+      setBulkBusy(true);
+      await bulkRemoveSongs([...bulkSelected]);
+      toast.success(`Removed ${bulkSelected.size} song${bulkSelected.size > 1 ? 's' : ''}`);
+      setBulkSelected(new Set());
+      setBulkMode(false);
+      onRefresh();
+    } catch (err) {
+      onError(err.response?.data?.message || 'Bulk remove failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const handleShuffle = async () => {
+    try {
+      setBulkBusy(true);
+      await shufflePlaylist();
+      toast.success('Playlist shuffled');
+      onRefresh();
+    } catch (err) {
+      onError(err.response?.data?.message || 'Shuffle failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const setItemRef = useCallback((id, node) => {
     if (node) {
@@ -208,8 +268,49 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
           Playlist
         </h2>
         <span className="text-[11px] text-gray-500">
-          Drag the handle to move songs anywhere in the queue
+          {bulkMode ? 'Select songs, then act' : 'Drag the handle to move songs anywhere in the queue'}
         </span>
+      </div>
+
+      {/* Bulk actions toolbar */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <button
+          onClick={toggleBulkMode}
+          disabled={bulkBusy || songs.length === 0}
+          className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+            bulkMode
+              ? 'bg-accent/20 text-accent hover:bg-accent/30'
+              : 'bg-white/10 text-gray-300 hover:bg-white/20'
+          } disabled:opacity-40`}
+        >
+          {bulkMode ? '✕ Cancel' : '☐ Select'}
+        </button>
+
+        {bulkMode && (
+          <>
+            <button
+              onClick={toggleSelectAll}
+              className="px-3 py-1.5 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors"
+            >
+              {bulkSelected.size === songs.length ? 'Deselect All' : 'Select All'}
+            </button>
+            <button
+              onClick={handleBulkRemove}
+              disabled={bulkSelected.size === 0 || bulkBusy}
+              className="px-3 py-1.5 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors disabled:opacity-40"
+            >
+              🗑 Remove ({bulkSelected.size})
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={handleShuffle}
+          disabled={bulkBusy || songs.length < 2}
+          className="px-3 py-1.5 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-40"
+        >
+          🔀 Shuffle
+        </button>
       </div>
 
       {/* Playlist list */}
@@ -229,12 +330,14 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
               editing={editing}
               isMoving={movingId === song.id}
               dragState={dragState}
+              bulkMode={bulkMode}
+              bulkChecked={bulkSelected.has(song.id)}
               setItemRef={setItemRef}
               onStartDrag={startDrag}
               onUpdateDrag={updateDrag}
               onFinishDrag={finishDrag}
               onCancelDrag={cancelDrag}
-              onToggleSelect={() => toggleSelect(song.id)}
+              onToggleSelect={() => bulkMode ? toggleBulkItem(song.id) : toggleSelect(song.id)}
               onReorder={handleReorder}
               onSelect={handleSelect}
               onRemove={handleRemove}
@@ -260,6 +363,8 @@ function SongItem({
   editing,
   isMoving,
   dragState,
+  bulkMode,
+  bulkChecked,
   setItemRef,
   onStartDrag,
   onUpdateDrag,
@@ -311,6 +416,15 @@ function SongItem({
         }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {bulkMode && (
+            <input
+              type="checkbox"
+              checked={bulkChecked}
+              onChange={onToggleSelect}
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 w-4 h-4 accent-green-500 cursor-pointer"
+            />
+          )}
           <button
             type="button"
             data-song-id={song.id}
