@@ -4,6 +4,7 @@ import {
   playSongFromPlaylist,
   editSongInPlaylist,
   reorderSong,
+  moveSong,
   bulkRemoveSongs,
   shufflePlaylist,
 } from '../api';
@@ -176,8 +177,17 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
 
   const handleSelect = async (id) => {
     try {
-      await playSongFromPlaylist(id);
+      const idx = songs.findIndex((s) => s.id === id);
+      if (idx > 0) {
+        setMovingId(id);
+        await moveSong(id, 0);
+        setMovingId(null);
+      } else {
+        await playSongFromPlaylist(id);
+      }
+      onRefresh();
     } catch (err) {
+      setMovingId(null);
       onError(err.response?.data?.message || 'Failed to select song');
     }
   };
@@ -197,13 +207,6 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
     try {
       setMovingId(id);
       await reorderSong(id, direction);
-
-      // Auto-play if moved to the top
-      const idx = songs.findIndex((s) => s.id === id);
-      if (direction === 'up' && idx === 1) {
-        await playSongFromPlaylist(id);
-      }
-
       onRefresh();
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to reorder');
@@ -215,21 +218,9 @@ export default function SongQueue({ songs, currentTrackId, onError, onRefresh })
   const moveSongToIndex = useCallback(async (id, fromIndex, toIndex) => {
     if (fromIndex === toIndex) return;
 
-    const direction = toIndex < fromIndex ? 'up' : 'down';
-    const steps = Math.abs(toIndex - fromIndex);
-
     try {
       setMovingId(id);
-
-      for (let step = 0; step < steps; step += 1) {
-        await reorderSong(id, direction);
-      }
-
-      // Auto-play if moved to the top
-      if (toIndex === 0) {
-        await playSongFromPlaylist(id);
-      }
-
+      await moveSong(id, toIndex);
       onRefresh();
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to move song');

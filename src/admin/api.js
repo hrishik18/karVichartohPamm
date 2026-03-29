@@ -52,6 +52,8 @@ export const editSongInPlaylist = (id, updates) =>
   api.patch(`/api/admin/song/${encodeURIComponent(id)}`, updates);
 export const reorderSong = (id, direction) =>
   api.post('/api/admin/song/reorder', { id, direction });
+export const moveSong = (id, toIndex) =>
+  api.post('/api/admin/song/move', { id, toIndex });
 
 // Bulk playlist actions
 export const bulkRemoveSongs = (ids) =>
