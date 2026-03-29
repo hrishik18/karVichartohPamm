@@ -98,7 +98,7 @@ export default function Dashboard() {
       <header className="flex items-center justify-between px-4 py-4 border-b border-subtle">
         <div>
           <h1 className="text-lg font-bold">KVTP Admin</h1>
-          <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5">
             <span
               className={`w-2 h-2 rounded-full ${
                 connected ? 'bg-accent' : 'bg-red-500 animate-pulse'
@@ -106,6 +106,9 @@ export default function Dashboard() {
             />
             <span className="text-xs text-txt-secondary">
               {connected ? 'Live' : 'Reconnecting…'}
+            </span>
+            <span className="text-[10px] text-muted bg-elevated px-1.5 py-0.5 rounded-full">
+              v{process.env.REACT_APP_VERSION || '1.0.0'}
             </span>
           </div>
         </div>

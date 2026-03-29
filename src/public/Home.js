@@ -209,6 +209,8 @@ export default function Home() {
 
       <footer className="pb-6 text-center text-xs text-faint">
         KVTP &copy; {new Date().getFullYear()}
+        <span className="mx-1">·</span>
+        <span>v{process.env.REACT_APP_VERSION || '1.0.0'}</span>
       </footer>
 
       <InstallBanner />
