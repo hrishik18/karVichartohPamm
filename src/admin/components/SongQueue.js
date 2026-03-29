@@ -6,86 +6,46 @@ import {
   reorderSong,
 } from '../api';
 
-const SWIPE_THRESHOLD = 40; // px to trigger reorder
+const SNAP_TOP_PX = 20;
 
-function useSwipe(onSwipeUp, onSwipeDown) {
-  const startY = useRef(null);
-  const deltaY = useRef(0);
-  const [offset, setOffset] = useState(0);
-  const swiping = useRef(false);
+function getDropIndex(songs, itemRefs, clientY) {
+  if (songs.length === 0) return 0;
 
-  // --- Touch events (mobile) ---
-  const onTouchStart = useCallback((e) => {
-    startY.current = e.touches[0].clientY;
-    deltaY.current = 0;
-    swiping.current = true;
-  }, []);
+  // Snap to top when cursor is above (or within SNAP_TOP_PX of) the first item
+  const firstEl = itemRefs.current.get(songs[0].id);
+  if (firstEl) {
+    const firstRect = firstEl.getBoundingClientRect();
+    if (clientY < firstRect.top + SNAP_TOP_PX) return 0;
+  }
 
-  const onTouchMove = useCallback((e) => {
-    if (!swiping.current || startY.current === null) return;
-    deltaY.current = e.touches[0].clientY - startY.current;
-    setOffset(deltaY.current);
-  }, []);
+  for (let index = 0; index < songs.length; index += 1) {
+    const element = itemRefs.current.get(songs[index].id);
+    if (!element) continue;
 
-  const onTouchEnd = useCallback(() => {
-    if (!swiping.current) return;
-    swiping.current = false;
-    if (deltaY.current < -SWIPE_THRESHOLD && onSwipeUp) {
-      onSwipeUp();
-    } else if (deltaY.current > SWIPE_THRESHOLD && onSwipeDown) {
-      onSwipeDown();
+    const rect = element.getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      return index;
     }
-    startY.current = null;
-    deltaY.current = 0;
-    setOffset(0);
-  }, [onSwipeUp, onSwipeDown]);
+  }
 
-  // --- Mouse events (desktop) ---
-  const onMouseDown = useCallback((e) => {
-    startY.current = e.clientY;
-    deltaY.current = 0;
-    swiping.current = true;
-    e.preventDefault(); // prevent text selection while dragging
-  }, []);
-
-  const onMouseMove = useCallback((e) => {
-    if (!swiping.current || startY.current === null) return;
-    deltaY.current = e.clientY - startY.current;
-    setOffset(deltaY.current);
-  }, []);
-
-  const onMouseUp = useCallback(() => {
-    if (!swiping.current) return;
-    swiping.current = false;
-    if (deltaY.current < -SWIPE_THRESHOLD && onSwipeUp) {
-      onSwipeUp();
-    } else if (deltaY.current > SWIPE_THRESHOLD && onSwipeDown) {
-      onSwipeDown();
-    }
-    startY.current = null;
-    deltaY.current = 0;
-    setOffset(0);
-  }, [onSwipeUp, onSwipeDown]);
-
-  const onMouseLeave = useCallback(() => {
-    if (swiping.current) {
-      swiping.current = false;
-      startY.current = null;
-      deltaY.current = 0;
-      setOffset(0);
-    }
-  }, []);
-
-  return {
-    offset,
-    onTouchStart, onTouchMove, onTouchEnd,
-    onMouseDown, onMouseMove, onMouseUp, onMouseLeave,
-  };
+  return songs.length - 1;
 }
 
 export default function SongQueue({ songs, onError, onRefresh }) {
   const [selectedId, setSelectedId] = useState(null);
   const [editing, setEditing] = useState(null); // { id, title, url, duration }
+  const [dragState, setDragState] = useState(null);
+  const [movingId, setMovingId] = useState(null);
+  const itemRefs = useRef(new Map());
+
+  const setItemRef = useCallback((id, node) => {
+    if (node) {
+      itemRefs.current.set(id, node);
+      return;
+    }
+
+    itemRefs.current.delete(id);
+  }, []);
 
   const handleSelect = async (id) => {
     try {
@@ -108,12 +68,48 @@ export default function SongQueue({ songs, onError, onRefresh }) {
 
   const handleReorder = async (id, direction) => {
     try {
+      setMovingId(id);
       await reorderSong(id, direction);
+
+      // Auto-play if moved to the top
+      const idx = songs.findIndex((s) => s.id === id);
+      if (direction === 'up' && idx === 1) {
+        await playSongFromPlaylist(id);
+      }
+
       onRefresh();
     } catch (err) {
       onError(err.response?.data?.message || 'Failed to reorder');
+    } finally {
+      setMovingId(null);
     }
   };
+
+  const moveSongToIndex = useCallback(async (id, fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+
+    const direction = toIndex < fromIndex ? 'up' : 'down';
+    const steps = Math.abs(toIndex - fromIndex);
+
+    try {
+      setMovingId(id);
+
+      for (let step = 0; step < steps; step += 1) {
+        await reorderSong(id, direction);
+      }
+
+      // Auto-play if moved to the top
+      if (toIndex === 0) {
+        await playSongFromPlaylist(id);
+      }
+
+      onRefresh();
+    } catch (err) {
+      onError(err.response?.data?.message || 'Failed to move song');
+    } finally {
+      setMovingId(null);
+    }
+  }, [onError, onRefresh]);
 
   const startEdit = (song) => {
     setEditing({
@@ -142,15 +138,79 @@ export default function SongQueue({ songs, onError, onRefresh }) {
   };
 
   const toggleSelect = (id) => {
+    if (dragState || movingId) return;
     setSelectedId(selectedId === id ? null : id);
     if (editing && editing.id !== id) setEditing(null);
   };
 
+  const startDrag = useCallback((event, songId, sourceIndex) => {
+    if (movingId || (event.pointerType === 'mouse' && event.button !== 0)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+
+    setEditing(null);
+    setSelectedId((current) => (current === songId ? current : null));
+    setDragState({
+      songId,
+      sourceIndex,
+      dropIndex: sourceIndex,
+      startY: event.clientY,
+      currentY: event.clientY,
+    });
+  }, [movingId]);
+
+  const updateDrag = useCallback((event) => {
+    const songId = event.currentTarget?.dataset?.songId;
+    const clientY = event.clientY;
+
+    setDragState((current) => {
+      if (!current || current.songId !== songId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        currentY: clientY,
+        dropIndex: getDropIndex(songs, itemRefs, clientY),
+      };
+    });
+  }, [songs]);
+
+  const finishDrag = useCallback((event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    const currentDrag = dragState;
+    if (!currentDrag) return;
+
+    setDragState(null);
+    moveSongToIndex(
+      currentDrag.songId,
+      currentDrag.sourceIndex,
+      currentDrag.dropIndex
+    );
+  }, [dragState, moveSongToIndex]);
+
+  const cancelDrag = useCallback((event) => {
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setDragState(null);
+  }, []);
+
   return (
     <div className="bg-white/5 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-        Playlist
-      </h2>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+          Playlist
+        </h2>
+        <span className="text-[11px] text-gray-500">
+          Drag the handle to move songs anywhere in the queue
+        </span>
+      </div>
 
       {/* Playlist list */}
       {songs.length === 0 ? (
@@ -166,6 +226,13 @@ export default function SongQueue({ songs, onError, onRefresh }) {
               isSelected={selectedId === song.id}
               isEditing={editing && editing.id === song.id}
               editing={editing}
+              isMoving={movingId === song.id}
+              dragState={dragState}
+              setItemRef={setItemRef}
+              onStartDrag={startDrag}
+              onUpdateDrag={updateDrag}
+              onFinishDrag={finishDrag}
+              onCancelDrag={cancelDrag}
               onToggleSelect={() => toggleSelect(song.id)}
               onReorder={handleReorder}
               onSelect={handleSelect}
@@ -189,6 +256,13 @@ function SongItem({
   isSelected,
   isEditing,
   editing,
+  isMoving,
+  dragState,
+  setItemRef,
+  onStartDrag,
+  onUpdateDrag,
+  onFinishDrag,
+  onCancelDrag,
   onToggleSelect,
   onReorder,
   onSelect,
@@ -200,46 +274,53 @@ function SongItem({
 }) {
   const canMoveUp = index > 0;
   const canMoveDown = index < total - 1;
-
-  const swipe = useSwipe(
-    canMoveUp ? () => onReorder(song.id, 'up') : undefined,
-    canMoveDown ? () => onReorder(song.id, 'down') : undefined
-  );
-
-  // Visual cue: green tint for swipe-up, orange for swipe-down
-  const swipeDir = swipe.offset < -SWIPE_THRESHOLD ? 'up' : swipe.offset > SWIPE_THRESHOLD ? 'down' : null;
+  const isDragging = dragState?.songId === song.id;
+  const dragOffset = isDragging ? dragState.currentY - dragState.startY : 0;
+  const showDropBefore = dragState && dragState.dropIndex === index && dragState.dropIndex <= dragState.sourceIndex;
+  const showDropAfter = dragState && dragState.dropIndex === index && dragState.dropIndex > dragState.sourceIndex;
+  const disableActions = isMoving || Boolean(dragState);
 
   return (
     <li
-      onTouchStart={swipe.onTouchStart}
-      onTouchMove={swipe.onTouchMove}
-      onTouchEnd={swipe.onTouchEnd}
-      onMouseDown={swipe.onMouseDown}
-      onMouseMove={swipe.onMouseMove}
-      onMouseUp={swipe.onMouseUp}
-      onMouseLeave={swipe.onMouseLeave}
+      ref={(node) => setItemRef(song.id, node)}
       style={{
-        transform: swipe.offset ? `translateY(${Math.max(-60, Math.min(60, swipe.offset))}px)` : undefined,
-        transition: swipe.offset ? 'none' : 'transform 0.2s ease',
-        zIndex: swipe.offset ? 10 : 'auto',
-        userSelect: 'none',
-        cursor: 'grab',
+        transform: isDragging ? `translateY(${dragOffset}px)` : undefined,
+        transition: isDragging ? 'none' : 'transform 0.2s ease',
+        zIndex: isDragging ? 20 : 'auto',
+        opacity: isMoving ? 0.6 : 1,
       }}
+      className="relative"
     >
+      {showDropBefore && (
+        <div className="absolute -top-1 left-0 right-0 h-0.5 rounded-full bg-accent" />
+      )}
+
       {/* Song row */}
       <div
         onClick={onToggleSelect}
         className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer transition-colors ${
-          swipeDir === 'up'
-            ? 'bg-accent/20 ring-1 ring-accent/40'
-            : swipeDir === 'down'
-            ? 'bg-orange-500/20 ring-1 ring-orange-500/40'
+          isDragging
+            ? 'bg-white/12 ring-1 ring-accent/50 shadow-lg shadow-black/20'
             : isSelected
             ? 'bg-white/10 ring-1 ring-accent/40'
             : 'bg-white/5 hover:bg-white/[0.07]'
         }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          <button
+            type="button"
+            data-song-id={song.id}
+            aria-label={`Drag to move ${song.title}`}
+            onPointerDown={(event) => onStartDrag(event, song.id, index)}
+            onPointerMove={onUpdateDrag}
+            onPointerUp={onFinishDrag}
+            onPointerCancel={onCancelDrag}
+            disabled={disableActions || isEditing}
+            className="shrink-0 text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ touchAction: 'none', cursor: disableActions || isEditing ? 'not-allowed' : 'grab' }}
+          >
+            ⋮⋮
+          </button>
           <span className="text-gray-500 text-xs w-5 text-right shrink-0">
             {index + 1}
           </span>
@@ -253,47 +334,50 @@ function SongItem({
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
-          {swipeDir === 'up' && <span className="text-accent text-xs">▲</span>}
-          {swipeDir === 'down' && <span className="text-orange-400 text-xs">▼</span>}
-          {!swipeDir && (
-            <span className="text-gray-600 text-xs">
-              {isSelected ? '▾' : '▸'}
-            </span>
-          )}
+          <span className="text-gray-600 text-xs">
+            {isSelected ? '▾' : '▸'}
+          </span>
         </div>
       </div>
+
+      {showDropAfter && (
+        <div className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full bg-accent" />
+      )}
 
       {/* Expanded actions */}
       {isSelected && !isEditing && (
         <div className="flex flex-wrap gap-1 px-3 py-2 bg-white/[0.03] rounded-b-lg -mt-1">
           <button
             onClick={() => onReorder(song.id, 'up')}
-            disabled={!canMoveUp}
+            disabled={!canMoveUp || disableActions}
             className="px-2 py-1 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-30"
           >
             ▲ Up
           </button>
           <button
             onClick={() => onReorder(song.id, 'down')}
-            disabled={!canMoveDown}
+            disabled={!canMoveDown || disableActions}
             className="px-2 py-1 rounded bg-white/10 text-gray-300 text-xs hover:bg-white/20 transition-colors disabled:opacity-30"
           >
             ▼ Down
           </button>
           <button
             onClick={onStartEdit}
+            disabled={disableActions}
             className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs hover:bg-yellow-500/30 transition-colors"
           >
             ✏️ Edit
           </button>
           <button
             onClick={() => onSelect(song.id)}
+            disabled={disableActions}
             className="px-2 py-1 rounded bg-accent/20 text-accent text-xs hover:bg-accent/30 transition-colors"
           >
             ▶ Play
           </button>
           <button
             onClick={() => onRemove(song.id)}
+            disabled={disableActions}
             className="px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30 transition-colors"
           >
             🗑 Remove
