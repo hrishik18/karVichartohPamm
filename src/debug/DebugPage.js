@@ -611,16 +611,16 @@ export default function DebugPage() {
   };
 
   return (
-    <div className="min-h-screen bg-primary text-white">
+    <div className="min-h-screen bg-page text-heading">
       {/* Header */}
-      <header className="border-b border-white/10 px-4 py-4">
+      <header className="border-b border-subtle px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold tracking-tight">KVTP Debug Console</h1>
-            <p className="text-[10px] text-gray-600 mt-0.5">Internal diagnostics — not for end users</p>
+            <p className="text-[10px] text-faint mt-0.5">Internal diagnostics — not for end users</p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={autoRefresh}
@@ -629,7 +629,7 @@ export default function DebugPage() {
               />
               Auto-refresh (5s)
             </label>
-            <button onClick={fetchAll} className="px-3 py-1.5 rounded-lg bg-white/10 text-xs text-gray-300 hover:bg-white/20 transition-colors">
+            <button onClick={fetchAll} className="px-3 py-1.5 rounded-lg bg-elevated text-xs text-body hover:bg-elevated-hover transition-colors">
               ↻ Refresh All
             </button>
           </div>
@@ -637,7 +637,7 @@ export default function DebugPage() {
       </header>
 
       {/* Tab bar */}
-      <nav className="border-b border-white/10 px-4 overflow-x-auto">
+      <nav className="border-b border-subtle px-4 overflow-x-auto">
         <div className="max-w-5xl mx-auto flex gap-1">
           {TABS.map((t) => (
             <button
@@ -645,8 +645,8 @@ export default function DebugPage() {
               onClick={() => setTab(t)}
               className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
                 tab === t
-                  ? 'border-accent text-white'
-                  : 'border-transparent text-gray-500 hover:text-gray-300'
+                  ? 'border-accent text-heading'
+                  : 'border-transparent text-muted hover:text-body'
               }`}
             >
               {t}

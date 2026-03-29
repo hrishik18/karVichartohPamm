@@ -2,7 +2,53 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 
 const RETRY_DELAY = 3000;
 
-export default function AudioPlayer({ src, isStream, startTime, duration, onEnded, onError: onErrorCb }) {
+function formatTime(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function SongProgressBar({ audioRef, duration, playing }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!duration || !playing) {
+      if (!playing) setElapsed(audioRef?.current?.currentTime || 0);
+      return;
+    }
+
+    const update = () => {
+      const time = audioRef?.current?.currentTime || 0;
+      setElapsed(Math.min(time, duration));
+    };
+
+    update();
+    const id = setInterval(update, 500);
+    return () => clearInterval(id);
+  }, [audioRef, duration, playing]);
+
+  if (!duration) return null;
+
+  const pct = Math.min((elapsed / duration) * 100, 100);
+
+  return (
+    <div className="w-full max-w-xs flex flex-col gap-1">
+      {/* Bar */}
+      <div className="w-full h-1.5 rounded-full bg-elevated overflow-hidden">
+        <div
+          className="h-full rounded-full bg-accent transition-[width] duration-1000 ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {/* Time labels */}
+      <div className="flex justify-between text-[11px] text-muted">
+        <span>{formatTime(elapsed)}</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function AudioPlayer({ src, isStream, startTime, duration, trackTitle, onEnded, onError: onErrorCb }) {
   const audioRef = useRef(null);
   const retryTimer = useRef(null);
   const prevSrc = useRef(src);
@@ -10,6 +56,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Tracks whether user has engaged playback — stays true across song transitions
+  const userWantsPlayback = useRef(false);
 
   const onErrorCbRef = useRef(onErrorCb);
 
@@ -32,14 +80,15 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
     return offset > 0 ? offset : 0;
   }, [isStream, startTime, duration]);
 
-  // Handle src change while playing
+  // Handle src change — auto-play next track if user had been listening
   useEffect(() => {
-    if (prevSrc.current !== src && playing) {
+    if (prevSrc.current !== src && userWantsPlayback.current) {
       const audio = audioRef.current;
-      if (audio) {
+      if (audio && src) {
         audio.src = src;
         audio.load();
         setLoading(true);
+        setError(null);
         const offset = getSyncOffset();
         if (offset === -1) {
           setLoading(false);
@@ -55,7 +104,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       }
     }
     prevSrc.current = src;
-  }, [src, playing, getSyncOffset]);
+  }, [src, getSyncOffset]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -76,7 +125,9 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       }
       setPlaying(false);
       setLoading(false);
+      userWantsPlayback.current = false;
     } else {
+      userWantsPlayback.current = true;
       // Stop any existing playback first to prevent overlap
       audio.pause();
       audio.currentTime = 0;
@@ -86,12 +137,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
 
       // Apply sync offset for music mode
       const offset = getSyncOffset();
-      if (offset === -1) {
-        // Track already ended server-side, advance
-        setLoading(false);
-        if (onEndedRef.current) onEndedRef.current();
-        return;
-      }
+      // If track expired server-side (offset === -1), play from beginning
+      // anyway — user explicitly clicked play, so honor it.
       if (offset > 0) audio.currentTime = offset;
 
       audio.play().catch(() => {
@@ -138,12 +185,22 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
         if (onEndedRef.current) onEndedRef.current();
       }
     };
+    // Fallback: if duration is known and audio exceeds it, trigger ended
+    // (handles cases where audio file is longer than recorded duration)
+    const onTimeUpdate = () => {
+      if (!isStream && duration && audio.currentTime >= duration) {
+        audio.pause();
+        setPlaying(false);
+        if (onEndedRef.current) onEndedRef.current();
+      }
+    };
 
     audio.addEventListener('playing', onPlaying);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('waiting', onWaiting);
     audio.addEventListener('error', onError);
     audio.addEventListener('ended', onEndedEvent);
+    audio.addEventListener('timeupdate', onTimeUpdate);
 
     return () => {
       audio.removeEventListener('playing', onPlaying);
@@ -151,8 +208,9 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       audio.removeEventListener('waiting', onWaiting);
       audio.removeEventListener('error', onError);
       audio.removeEventListener('ended', onEndedEvent);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
     };
-  }, [isStream]);
+  }, [isStream, duration]);
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -165,7 +223,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           !src
             ? 'bg-gray-600 cursor-not-allowed'
             : playing
-            ? 'bg-red-600 hover:bg-red-700 active:scale-95'
+            ? 'bg-gray-700 hover:bg-gray-600 active:scale-95'
             : 'bg-accent hover:bg-green-600 active:scale-95'
         }`}
         aria-label={playing ? 'Pause' : 'Play'}
@@ -187,7 +245,16 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
         )}
       </button>
 
-      <p className="text-sm text-gray-400">
+      {/* Song progress bar — hidden in stream/speaker mode */}
+      {!isStream && (
+        <SongProgressBar
+          audioRef={audioRef}
+          duration={duration}
+          playing={playing}
+        />
+      )}
+
+      <p className="text-sm text-txt-secondary">
         {error
           ? <span className="text-red-400">{error}</span>
           : !src
@@ -196,6 +263,8 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
           ? (isStream ? 'Connecting to stream…' : 'Loading track…')
           : playing
           ? (isStream ? 'Now streaming' : 'Now playing')
+          : trackTitle
+          ? trackTitle
           : 'Tap to Listen'}
       </p>
     </div>

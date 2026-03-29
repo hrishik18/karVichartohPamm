@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { uploadSongs, addSongToPlaylist } from '../api';
+import { useToast } from '../../components/Toast';
 
 const MAX_FILES = 10;
 
@@ -25,6 +26,7 @@ function titleFromFilename(name) {
 }
 
 export default function UploadSection({ onError, onUploaded }) {
+  const toast = useToast();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(''); // status text
@@ -61,13 +63,11 @@ export default function UploadSection({ onError, onUploaded }) {
         await addSongToPlaylist(title, blobUrl, duration);
       }
 
-      setProgress(`Added ${results.length} song${results.length > 1 ? 's' : ''}`);
+      setProgress('');
+      toast.success(`Added ${results.length} song${results.length > 1 ? 's' : ''} to playlist`);
       setFiles([]);
       if (inputRef.current) inputRef.current.value = '';
       if (onUploaded) onUploaded();
-
-      // Clear success message after 3s
-      setTimeout(() => setProgress(''), 3000);
     } catch (err) {
       setProgress('');
       onError(err.response?.data?.message || 'Upload failed');
@@ -77,8 +77,8 @@ export default function UploadSection({ onError, onUploaded }) {
   };
 
   return (
-    <div className="bg-white/5 rounded-2xl p-5">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+    <div className="bg-card rounded-2xl p-5">
+      <h2 className="text-sm font-semibold text-txt-secondary uppercase tracking-wider mb-3">
         Upload Songs
       </h2>
 
@@ -89,18 +89,21 @@ export default function UploadSection({ onError, onUploaded }) {
           accept="audio/*"
           multiple
           onChange={handleFileChange}
-          className="text-sm text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-white/10 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-white/20"
+          className="text-sm text-body file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-elevated file:text-heading file:font-semibold file:cursor-pointer hover:file:bg-elevated-hover"
         />
+        <p className="text-xs text-muted">
+          Select up to {MAX_FILES} files at once · MP3, WAV, OGG
+        </p>
 
         {files.length > 0 && (
-          <div className="text-gray-400 text-xs space-y-0.5">
+          <div className="text-txt-secondary text-xs space-y-0.5">
             {files.map((f, i) => (
               <p key={i} className="truncate">
                 {f.name} ({(f.size / 1024 / 1024).toFixed(1)} MB)
               </p>
             ))}
-            <p className="text-gray-500 pt-1">
-              {files.length} file{files.length > 1 ? 's' : ''} selected (max {MAX_FILES})
+            <p className="text-muted pt-1">
+              {files.length} of {MAX_FILES} slots used
             </p>
           </div>
         )}

@@ -8,7 +8,7 @@ export default function StatusBanner({ socketConnected, speakerLive }) {
             socketConnected ? 'bg-accent' : 'bg-red-500 animate-pulse'
           }`}
         />
-        <span className={socketConnected ? 'text-gray-400' : 'text-red-400'}>
+        <span className={socketConnected ? 'text-txt-secondary' : 'text-red-400'}>
           {socketConnected ? 'Connected' : 'Reconnecting…'}
         </span>
       </div>
@@ -17,10 +17,10 @@ export default function StatusBanner({ socketConnected, speakerLive }) {
       <div className="flex items-center gap-1.5">
         <span
           className={`w-2 h-2 rounded-full ${
-            speakerLive ? 'bg-purple-500 animate-pulse' : 'bg-gray-600'
+            speakerLive ? 'bg-purple-500 animate-pulse' : 'bg-faint'
           }`}
         />
-        <span className={speakerLive ? 'text-purple-400' : 'text-gray-500'}>
+        <span className={speakerLive ? 'text-purple-400' : 'text-muted'}>
           {speakerLive ? 'Speaker Live' : 'Music Mode'}
         </span>
       </div>
