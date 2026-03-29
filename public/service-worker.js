@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first: try network, fall back to cache
+  // Fetch: network-first for everything, fallback to cache, then offline shell
   event.respondWith(
     fetch(request)
       .then((response) => {
@@ -60,6 +60,14 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request))
+      .catch(() =>
+        caches.match(request).then((cached) => {
+          // If no cache hit for a navigation request, serve the cached index.html (app shell)
+          if (!cached && request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          return cached;
+        })
+      )
   );
 });

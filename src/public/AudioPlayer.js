@@ -7,26 +7,26 @@ function formatTime(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function SongProgressBar({ startTime, duration, playing }) {
+function SongProgressBar({ audioRef, duration, playing }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    if (!startTime || !duration || !playing) {
-      setElapsed(0);
+    if (!duration || !playing) {
+      if (!playing) setElapsed(audioRef?.current?.currentTime || 0);
       return;
     }
 
     const update = () => {
-      const now = Math.floor(Date.now() / 1000);
-      setElapsed(Math.min(now - startTime, duration));
+      const time = audioRef?.current?.currentTime || 0;
+      setElapsed(Math.min(time, duration));
     };
 
     update();
-    const id = setInterval(update, 1000);
+    const id = setInterval(update, 500);
     return () => clearInterval(id);
-  }, [startTime, duration, playing]);
+  }, [audioRef, duration, playing]);
 
-  if (!duration || !startTime) return null;
+  if (!duration) return null;
 
   const pct = Math.min((elapsed / duration) * 100, 100);
 
@@ -185,12 +185,22 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
         if (onEndedRef.current) onEndedRef.current();
       }
     };
+    // Fallback: if duration is known and audio exceeds it, trigger ended
+    // (handles cases where audio file is longer than recorded duration)
+    const onTimeUpdate = () => {
+      if (!isStream && duration && audio.currentTime >= duration) {
+        audio.pause();
+        setPlaying(false);
+        if (onEndedRef.current) onEndedRef.current();
+      }
+    };
 
     audio.addEventListener('playing', onPlaying);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('waiting', onWaiting);
     audio.addEventListener('error', onError);
     audio.addEventListener('ended', onEndedEvent);
+    audio.addEventListener('timeupdate', onTimeUpdate);
 
     return () => {
       audio.removeEventListener('playing', onPlaying);
@@ -198,8 +208,9 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       audio.removeEventListener('waiting', onWaiting);
       audio.removeEventListener('error', onError);
       audio.removeEventListener('ended', onEndedEvent);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
     };
-  }, [isStream]);
+  }, [isStream, duration]);
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -237,7 +248,7 @@ export default function AudioPlayer({ src, isStream, startTime, duration, onEnde
       {/* Song progress bar — hidden in stream/speaker mode */}
       {!isStream && (
         <SongProgressBar
-          startTime={startTime}
+          audioRef={audioRef}
           duration={duration}
           playing={playing}
         />

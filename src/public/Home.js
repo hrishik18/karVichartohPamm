@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import AudioPlayer from './AudioPlayer';
 import NowPlaying from './NowPlaying';
 import StatusBanner from './StatusBanner';
+import InstallBanner from './InstallBanner';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const FALLBACK_STREAM_URL = process.env.REACT_APP_STREAM_URL || '';
@@ -170,6 +171,8 @@ export default function Home() {
       <footer className="pb-6 text-center text-xs text-gray-600">
         KVTP &copy; {new Date().getFullYear()}
       </footer>
+
+      <InstallBanner />
     </div>
   );
 }
